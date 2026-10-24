@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "EM BÔNG AI · Đồng bộ Cookie Muse.ai",
+  "version": "1.2.0",
+  "description": "Đồng bộ 1-Click toàn bộ Cookie đăng nhập Muse.ai (bao gồm httpOnly) về EM BÔNG AI Muse Studio.",
+  "permissions": ["cookies", "storage", "activeTab"],
+  "host_permissions": [
+    "https://muse.ai/*",
+    "https://*.muse.ai/*",
+    "http://*/*",
+    "https://*/*"
+  ],
+  "action": {
+    "default_title": "EM BÔNG AI · Đồng bộ Cookie Muse.ai",
+    "default_popup": "popup.html"
+  }
+}
