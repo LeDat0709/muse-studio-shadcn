@@ -8,6 +8,21 @@ const { Store } = require("./store");
 const { MuseEngine, resolveModel, findChromeBinary } = require("./engine");
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
+const SUPPORTED_ASPECT_RATIOS = ["1:1", "16:9", "9:16", "4:3", "3:4"];
+
+// OpenAI clients send `size` as pixels ("1024x1792"); Muse needs a ratio, so snap to the nearest supported one.
+function sizeToAspectRatio(value, fallback) {
+  const v = String(value || "").trim();
+  if (/^\d+:\d+$/.test(v)) return v;
+  const m = v.match(/^(\d+)\s*[x×]\s*(\d+)$/i);
+  if (!m || !Number(m[1]) || !Number(m[2])) return fallback;
+  const target = Math.log(Number(m[1]) / Number(m[2]));
+  const distance = (ratio) => {
+    const [w, h] = ratio.split(":").map(Number);
+    return Math.abs(Math.log(w / h) - target);
+  };
+  return SUPPORTED_ASPECT_RATIOS.reduce((best, r) => (distance(r) < distance(best) ? r : best));
+}
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -271,6 +286,13 @@ class MuseServer {
     } catch (_err) {
       return false;
     }
+  }
+
+  // An empty prompt would still burn a Muse turn, so /v1 rejects it up front like /admin/generate does.
+  _rejectEmptyPrompt(res, prompt) {
+    if (String(prompt || "").trim()) return false;
+    this._sendJson(res, 400, { error: { message: "prompt is required", type: "invalid_request_error" } });
+    return true;
   }
 
   async _handleRequest(req, res) {
@@ -1245,12 +1267,13 @@ Yêu cầu bắt buộc:
     if (pathname === "/v1/images/generations" && req.method === "POST") {
       const body = await this._readJson(req);
       const prompt = body.prompt || "";
+      if (this._rejectEmptyPrompt(res, prompt)) return;
       const responseFormat = body.response_format || "url";
       try {
         const out = await this.engine.generateImage({
           prompt,
           model: body.model || "muse-image",
-          aspectRatio: body.aspect_ratio || body.size || "1:1",
+          aspectRatio: sizeToAspectRatio(body.aspect_ratio || body.size, "1:1"),
           quality: body.quality || "4K",
         });
         return this._sendJson(res, 200, {
@@ -1285,7 +1308,7 @@ Yêu cầu bắt buộc:
         prompt = fields.prompt || "";
         model = fields.model || "muse-image";
         responseFormat = fields.response_format || "url";
-        aspectRatio = fields.aspect_ratio || fields.size || "";
+        aspectRatio = sizeToAspectRatio(fields.aspect_ratio || fields.size, "");
         quality = fields.quality || "4K";
         for (const f of files) {
           referenceImages.push({ b64: f.b64, mime: f.mime, name: f.filename });
@@ -1295,7 +1318,7 @@ Yêu cầu bắt buộc:
         prompt = body.prompt || "";
         model = body.model || "muse-image";
         responseFormat = body.response_format || "url";
-        aspectRatio = body.aspect_ratio || body.size || "";
+        aspectRatio = sizeToAspectRatio(body.aspect_ratio || body.size, "");
         quality = body.quality || "4K";
         if (Array.isArray(body.images)) {
           for (const item of body.images) {
@@ -1308,6 +1331,7 @@ Yêu cầu bắt buộc:
           }
         }
       }
+      if (this._rejectEmptyPrompt(res, prompt)) return;
 
       try {
         const out = await this.engine.generateImage({
@@ -1335,6 +1359,7 @@ Yêu cầu bắt buộc:
     if (pathname === "/v1/images/tasks" && req.method === "POST") {
       const body = await this._readJson(req);
       const prompt = body.prompt || "";
+      if (this._rejectEmptyPrompt(res, prompt)) return;
       const model = body.model || "muse-image";
       const placeholder = this.store.createTask("image_async", prompt, model);
 
@@ -1342,7 +1367,7 @@ Yêu cầu bắt buộc:
         .generateImage({
           prompt,
           model,
-          aspectRatio: body.aspect_ratio || body.size || "",
+          aspectRatio: sizeToAspectRatio(body.aspect_ratio || body.size, ""),
           quality: body.quality || "4K",
         })
         .then((out) => {
@@ -1385,7 +1410,7 @@ Yêu cầu bắt buộc:
         const { fields, files } = parseMultipart(buf, boundary);
         prompt = fields.prompt || "";
         model = fields.model || "muse-video";
-        aspectRatio = fields.aspect_ratio || fields.size || "9:16";
+        aspectRatio = sizeToAspectRatio(fields.aspect_ratio || fields.size, "9:16");
         duration = fields.duration || "20s";
         quality = fields.quality || "4K";
         asyncMode = fields.async === "true";
@@ -1400,7 +1425,7 @@ Yêu cầu bắt buộc:
         const body = await this._readJson(req);
         prompt = body.prompt || "";
         model = body.model || "muse-video";
-        aspectRatio = body.aspect_ratio || body.size || "9:16";
+        aspectRatio = sizeToAspectRatio(body.aspect_ratio || body.size, "9:16");
         duration = body.duration || "20s";
         quality = body.quality || "4K";
         asyncMode = Boolean(body.async);
@@ -1411,6 +1436,7 @@ Yêu cầu bắt buộc:
           referenceImage = { b64, mime: "image/png", name: "first_frame.png" };
         }
       }
+      if (this._rejectEmptyPrompt(res, prompt)) return;
 
       if (asyncMode) {
         const placeholder = this.store.createTask("video_async", prompt, model);
@@ -1528,4 +1554,5 @@ Yêu cầu bắt buộc:
 module.exports = {
   MuseServer,
   buildZipBuffer,
+  sizeToAspectRatio,
 };
