@@ -2850,6 +2850,32 @@ foreach ($p in $procs) {
       const baselineSources = new Set();
       let baseAgentCnt = 0;
 
+      // Snapshot what is already on the page so only media that appears after our prompt counts as the result.
+      const captureBaseline = async () => {
+        const atts = (await cdp.evaluate(JS_GET_ATTACHMENTS)) || [];
+        baselineSources.clear();
+        for (const a of atts) {
+          if (a.src) baselineSources.add(a.src);
+          if (a.vSrc) baselineSources.add(a.vSrc);
+          if (a.iSrc) baselineSources.add(a.iSrc);
+        }
+        const agent = (await cdp.evaluate(JS_POLL_AGENT_STATUS)) || { cnt: 0 };
+        baseAgentCnt = Number(agent.cnt || 0);
+      };
+
+      const resendInFreshThread = () =>
+        this._withAccountSendLock(account.id, async () => {
+          await cdp.send("Page.navigate", { url: MUSE_NEW_THREAD });
+          await new Promise((r) => setTimeout(r, 1800));
+          await this._waitWsReady(cdp, 25000);
+          if (validRefImgs.length > 0) {
+            await this._attachReferenceImages(cdp, validRefImgs);
+          }
+          await captureBaseline();
+          await this._sendPromptToMuse(cdp, finalPrompt);
+          await new Promise((r) => setTimeout(r, 2500));
+        });
+
       // Serialize initial thread creation + image upload + prompt submission per account
       // so parallel windows on the same Muse account never collide on /thread/new WebSocket handshakes
       await this._withAccountSendLock(account.id, async () => {
@@ -2877,15 +2903,7 @@ foreach ($p in $procs) {
           await cdp.evaluate(JS_CLEAR_ATTACHMENTS);
         }
 
-        const attsBefore = (await cdp.evaluate(JS_GET_ATTACHMENTS)) || [];
-        baselineSources.clear();
-        for (const a of attsBefore) {
-          if (a.src) baselineSources.add(a.src);
-          if (a.vSrc) baselineSources.add(a.vSrc);
-          if (a.iSrc) baselineSources.add(a.iSrc);
-        }
-        const agentBefore = (await cdp.evaluate(JS_POLL_AGENT_STATUS)) || { cnt: 0 };
-        baseAgentCnt = Number(agentBefore.cnt || 0);
+        await captureBaseline();
 
         reportProgress(
           35,
@@ -3002,25 +3020,7 @@ foreach ($p in $procs) {
               Math.min(45, progPct),
               `Đang tự động làm mới kết nối & gửi lại lệnh (Lần ${resendAttempts}/4)...`
             );
-            await this._withAccountSendLock(account.id, async () => {
-              await cdp.send("Page.navigate", { url: MUSE_NEW_THREAD });
-              await new Promise((r) => setTimeout(r, 1800));
-              await this._waitWsReady(cdp, 25000);
-              if (validRefImgs.length > 0) {
-                await this._attachReferenceImages(cdp, validRefImgs);
-              }
-              const attsNow = (await cdp.evaluate(JS_GET_ATTACHMENTS)) || [];
-              baselineSources.clear();
-              for (const a of attsNow) {
-                if (a.src) baselineSources.add(a.src);
-                if (a.vSrc) baselineSources.add(a.vSrc);
-                if (a.iSrc) baselineSources.add(a.iSrc);
-              }
-              const agentNow = (await cdp.evaluate(JS_POLL_AGENT_STATUS)) || { cnt: 0 };
-              baseAgentCnt = Number(agentNow.cnt || 0);
-              await this._sendPromptToMuse(cdp, finalPrompt);
-              await new Promise((r) => setTimeout(r, 2500));
-            });
+            await resendInFreshThread();
             lastSendTime = Date.now();
             unhydratedIdleTicks = 0;
             staleDomTicks = 0;
@@ -3105,16 +3105,7 @@ foreach ($p in $procs) {
             this.log(
               `[${account.name}] [Luồng #${(streamSlot || 0) + 1}] 🔄 Luồng /thread/new chưa khởi tạo trên máy chủ, tự động gửi lại câu lệnh (Lần ${resendAttempts}/4)...`
             );
-            await this._withAccountSendLock(account.id, async () => {
-              await cdp.send("Page.navigate", { url: MUSE_NEW_THREAD });
-              await new Promise((r) => setTimeout(r, 1800));
-              await this._waitWsReady(cdp, 25000);
-              if (validRefImgs.length > 0) {
-                await this._attachReferenceImages(cdp, validRefImgs);
-              }
-              await this._sendPromptToMuse(cdp, finalPrompt);
-              await new Promise((r) => setTimeout(r, 2500));
-            });
+            await resendInFreshThread();
             lastSendTime = Date.now();
             continue;
           }
