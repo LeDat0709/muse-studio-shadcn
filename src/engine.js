@@ -4,6 +4,8 @@ const fs = require("fs");
 const path = require("path");
 const crypto = require("crypto");
 const { spawn } = require("child_process");
+const { Readable } = require("stream");
+const { pipeline } = require("stream/promises");
 const {
   CDPClient,
   getTargets,
@@ -163,19 +165,31 @@ const JS_GET_ATTACHMENTS = `
 })()
 `;
 
-// Never clobber an earlier render: "Title.mp4", then "Title (2).mp4", ... The "wx" flag makes the
-// existence check and the write one atomic step, so parallel streams for the same product can't race.
-function writeUniqueFile(dir, base, ext, buf) {
+// Never clobber an earlier render: claims "Title.mp4", then "Title (2).mp4", ... The "wx" flag makes the
+// existence check and the create one atomic step, so parallel streams for the same product can't race.
+function reserveUniqueFile(dir, base, ext) {
   for (let n = 1; ; n += 1) {
     const filename = n === 1 ? `${base}${ext}` : `${base} (${n})${ext}`;
     try {
-      fs.writeFileSync(path.join(dir, filename), buf, { flag: "wx" });
+      fs.closeSync(fs.openSync(path.join(dir, filename), "wx"));
       return filename;
     } catch (err) {
       if (err.code !== "EEXIST") throw err;
     }
   }
 }
+
+function mediaExtFor(mime, expect) {
+  const m = String(mime || "").toLowerCase();
+  if (m.includes("mp4")) return ".mp4";
+  if (m.includes("webm")) return ".webm";
+  if (m.includes("png")) return ".png";
+  if (m.includes("jpeg") || m.includes("jpg")) return ".jpg";
+  if (m.includes("webp")) return ".webp";
+  return expect === "video" ? ".mp4" : ".png";
+}
+
+const MEDIA_DOWNLOAD_TIMEOUT_MS = 10 * 60 * 1000;
 
 const MAX_SINGLE_CLIP_SEC = 10;
 
@@ -2581,7 +2595,62 @@ foreach ($p in $procs) {
     return "";
   }
 
+  // Streams an http(s) media URL straight to disk with the tab's own cookies, so a 4K video is never held in
+  // memory as base64. Returns null (the caller then uses the in-page path) for blob:/data: sources or any
+  // response that isn't media, e.g. a login page.
+  async _downloadMediaDirect(cdp, src, expect, base) {
+    if (!/^https?:\/\//i.test(src)) return null;
+    let fullPath = "";
+    try {
+      const { cookies = [] } = (await cdp.send("Network.getCookies", { urls: [src] })) || {};
+      const res = await fetch(src, {
+        headers: cookies.length ? { Cookie: cookies.map((c) => `${c.name}=${c.value}`).join("; ") } : {},
+        signal: AbortSignal.timeout(MEDIA_DOWNLOAD_TIMEOUT_MS),
+      });
+      const mime = String(res.headers.get("content-type") || "").toLowerCase();
+      if (!res.ok || !res.body || !/^(video|image)\/|octet-stream/.test(mime)) {
+        await res.body?.cancel().catch(() => {});
+        throw new Error(`HTTP ${res.status} ${mime || "không có content-type"}`);
+      }
+      const filename = reserveUniqueFile(this.store.mediaDir, base, mediaExtFor(mime, expect));
+      fullPath = path.join(this.store.mediaDir, filename);
+      await pipeline(Readable.fromWeb(res.body), fs.createWriteStream(fullPath));
+      const size = fs.statSync(fullPath).size;
+      if (!size) throw new Error("file rỗng");
+      return { filename, mime, size };
+    } catch (err) {
+      if (fullPath) fs.rmSync(fullPath, { force: true });
+      this.log(`Tải ${expect} trực tiếp thất bại (${err.message}), chuyển sang tải qua trình duyệt...`, "warn");
+      return null;
+    }
+  }
+
   async _saveMediaFromAttachment(cdp, selectedSrc, expect = "video", preferredTitle = "") {
+    const prefix = expect === "video" ? "vid" : "img";
+    const cleanCustom = String(preferredTitle || "")
+      .replace(/[\r\n\t]+/g, " ")
+      .replace(/[<>:"/\\|?*\x00-\x1f]/g, "-")
+      .replace(/\s+/g, " ")
+      .replace(/^[.\s]+|[.\s]+$/g, "")
+      .slice(0, 180)
+      .trim();
+    const base = cleanCustom || `${prefix}_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
+    // Videos are only ever served by URL; images keep base64 for the /v1 b64_json response format.
+    const result = (filename, mime, size, b64 = "") => {
+      const fullPath = path.join(this.store.mediaDir, filename);
+      return {
+        filename,
+        fullPath,
+        url: `/v1/media/${encodeURIComponent(filename)}`,
+        mime,
+        size,
+        ...(expect === "image" && { b64: b64 || fs.readFileSync(fullPath).toString("base64") }),
+      };
+    };
+
+    const direct = await this._downloadMediaDirect(cdp, selectedSrc, expect, base);
+    if (direct) return result(direct.filename, direct.mime, direct.size);
+
     let lastErr = "unknown";
     const chunkSize = 2 * 1024 * 1024; // 2MB per CDP chunk to avoid WebSocket frame limits
 
@@ -2617,34 +2686,9 @@ foreach ($p in $procs) {
 
           const fullB64 = chunks.join("");
           const buf = Buffer.from(fullB64, "base64");
-          const mime = String(meta.mime || "").toLowerCase();
-          let ext = expect === "video" ? ".mp4" : ".png";
-          if (mime.includes("mp4")) ext = ".mp4";
-          else if (mime.includes("webm")) ext = ".webm";
-          else if (mime.includes("png")) ext = ".png";
-          else if (mime.includes("jpeg") || mime.includes("jpg")) ext = ".jpg";
-          else if (mime.includes("webp")) ext = ".webp";
-
-          const prefix = expect === "video" ? "vid" : "img";
-          const cleanCustom = String(preferredTitle || "")
-            .replace(/[\r\n\t]+/g, " ")
-            .replace(/[<>:"/\\|?*\x00-\x1f]/g, "-")
-            .replace(/\s+/g, " ")
-            .replace(/^[.\s]+|[.\s]+$/g, "")
-            .slice(0, 180)
-            .trim();
-          const base =
-            cleanCustom || `${prefix}_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
-          const filename = writeUniqueFile(this.store.mediaDir, base, ext, buf);
-          const fullPath = path.join(this.store.mediaDir, filename);
-          return {
-            filename,
-            fullPath,
-            url: `/v1/media/${encodeURIComponent(filename)}`,
-            b64: fullB64,
-            mime: meta.mime,
-            size: buf.length,
-          };
+          const filename = reserveUniqueFile(this.store.mediaDir, base, mediaExtFor(meta.mime, expect));
+          fs.writeFileSync(path.join(this.store.mediaDir, filename), buf);
+          return result(filename, meta.mime, buf.length, fullB64);
         }
         lastErr = meta?.err || "extract-failed";
       } catch (err) {
@@ -3517,6 +3561,5 @@ module.exports = {
   resolveModel,
   findChromeBinary,
   MODEL_ALIASES,
-  writeUniqueFile,
   minStitchedDurationSec,
 };
