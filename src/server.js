@@ -155,11 +155,7 @@ class MuseServer {
   constructor(options = {}) {
     this.rootDir = options.rootDir || path.resolve(__dirname, "..");
     this.dataDir = options.dataDir || path.join(this.rootDir, "data");
-    const liveDesktopCandidate = path.resolve(this.rootDir, "..", "..", "..", "desktop");
-    this.desktopDir =
-      fs.existsSync(path.join(liveDesktopCandidate, "index.html"))
-        ? liveDesktopCandidate
-        : path.join(this.rootDir, "desktop");
+    this.desktopDir = path.join(this.rootDir, "desktop");
     this.store = options.store || new Store(this.dataDir);
     this.engine = options.engine || new MuseEngine(this.store, options);
     this.host = options.host || "127.0.0.1";
