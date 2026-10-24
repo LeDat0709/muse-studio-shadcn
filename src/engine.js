@@ -190,6 +190,15 @@ function mediaExtFor(mime, expect) {
 }
 
 const MEDIA_DOWNLOAD_TIMEOUT_MS = 10 * 60 * 1000;
+const PROMPT_INPUT_WAIT_MS = 20000;
+
+// Where the tab is and what it shows, for errors that would otherwise say only "no textarea".
+const JS_PAGE_SNAPSHOT = `
+(() => ({
+  url: location.href,
+  tail: (document.body ? document.body.innerText || '' : '').replace(/\\s+/g, ' ').trim().slice(-160),
+}))()
+`;
 
 const MAX_SINGLE_CLIP_SEC = 10;
 
@@ -240,7 +249,7 @@ const JS_POLL_AGENT_STATUS = `
 (() => {
   const scope = document.querySelector('main, [class*="chat-scroll"], [class*="hatch-chat-scroll"]') || document.body;
   if (!scope) {
-    return { cnt: 0, total: 0, txt: '', stop: false, tail: '', statusStep: '', productTitle: '' };
+    return { cnt: 0, total: 0, txt: '', stop: false, tail: '', statusStep: '', productTitle: '', hasInput: false };
   }
   const bs = Array.from(scope.querySelectorAll('div[class*="hatch-chat-groupable-bubble"]'))
     .filter(b => /hatch-agent-bubble-bg/.test(b.className || ''));
@@ -287,6 +296,7 @@ const JS_POLL_AGENT_STATUS = `
     statusStep,
     tail,
     productTitle,
+    hasInput: Boolean(document.querySelector('textarea')),
   };
 })()
 `;
@@ -2287,6 +2297,20 @@ foreach ($p in $procs) {
    * and clicks Send button (or presses Enter).
    */
   async _sendPromptToMuse(cdp, prompt) {
+    // Muse drops the composer for a few seconds while it reloads, reconnects or shows a notice;
+    // wait for it instead of failing the whole render on the first look.
+    const hasInputJs = "Boolean(document.querySelector('textarea'))";
+    if (!(await cdp.evaluate(hasInputJs))) {
+      const ready = await this._waitWsReady(cdp, PROMPT_INPUT_WAIT_MS);
+      if (!(await cdp.evaluate(hasInputJs))) {
+        const page = (await cdp.evaluate(JS_PAGE_SNAPSHOT).catch(() => null)) || {};
+        throw new Error(
+          `Không tìm thấy ô nhập lệnh (textarea) trên trang Muse.ai sau ${PROMPT_INPUT_WAIT_MS / 1000}s ` +
+            `(trạng thái: ${ready.state}, url: ${page.url || "?"}, cuối trang: "${page.tail || ""}")`
+        );
+      }
+    }
+
     await cdp.evaluate(`
       (() => {
         const ta = document.querySelector('textarea');
@@ -2991,6 +3015,9 @@ foreach ($p in $procs) {
         const curTxt = String(st.txt || "").trim();
         const statusStep = String(st.statusStep || "").trim();
         const hasStop = Boolean(st.stop);
+        // A page without the composer (reloading, reconnecting, showing a notice) has no Stop button either;
+        // it must not read as "agent finished its turn", or we fire a follow-up into a missing input.
+        const agentIdle = !hasStop && Boolean(st.hasInput);
 
         if (/额度不足|积分不足|out of credits|达到上限|token limit/i.test(tail)) {
           throw new Error("Ních Muse.ai đã hết hạn mức (Out of credits / Token limit)");
@@ -3134,13 +3161,13 @@ foreach ($p in $procs) {
               stableSrc = att.checkSrc;
               stableN = 0;
             }
-            if (!hasStop) {
+            if (agentIdle) {
               postMediaIdleTicks += 1;
             } else {
               postMediaIdleTicks = 0;
             }
-            // Wait until Chrome's agent has finished its turn (!hasStop for >= 3 ticks) and media is ready
-            if (!hasStop && postMediaIdleTicks >= 3 && ((w > 0 && h > 0) || stableN >= 3)) {
+            // Wait until Chrome's agent has finished its turn (idle for >= 3 ticks) and media is ready
+            if (agentIdle && postMediaIdleTicks >= 3 && ((w > 0 && h > 0) || stableN >= 3)) {
               matchedAtt = att;
               break;
             }
@@ -3158,7 +3185,7 @@ foreach ($p in $procs) {
             `Muse.ai đang tạo ${expect === "video" ? "Video" : "Ảnh"} (${elapsedSec}s)${stepInfo}`
           );
 
-          if (curCnt > baseAgentCnt && curTxt && !hasStop && newMatchingAtts.length === 0) {
+          if (curCnt > baseAgentCnt && curTxt && agentIdle && newMatchingAtts.length === 0) {
             const isMediaReport = /\.(?:webp|png|jpe?g|mp4|webm)|imagine_media|deliverable|generated\s+.*image|verified\s+generated|artifact|video/i.test(
               curTxt
             );
@@ -3209,15 +3236,15 @@ foreach ($p in $procs) {
             stableN = 0;
           }
 
-          if (!hasStop) {
+          if (agentIdle) {
             postMediaIdleTicks += 1;
           } else {
             postMediaIdleTicks = 0;
           }
 
           // 1. Did we receive a stitched video whose duration meets the >10s target (>= 72% of targetDurationSec)
-          //    AND Chrome has completely finished its turn (!hasStop for >= 4 consecutive ticks)?
-          if (!hasStop && postMediaIdleTicks >= 4 && latestDur >= targetDurationSec * 0.72) {
+          //    AND Chrome has completely finished its turn (idle for >= 4 consecutive ticks)?
+          if (agentIdle && postMediaIdleTicks >= 4 && latestDur >= targetDurationSec * 0.72) {
             this.log(
               `[${account.name}] [Luồng #${(streamSlot || 0) + 1}] ✅ Đã nhận được Video ghép hoàn chỉnh dài ${latestDur}s (Mục tiêu: ${targetDurationSec}s)!`
             );
@@ -3226,12 +3253,12 @@ foreach ($p in $procs) {
           }
 
           // 2. Did Muse output a brand-new stitched video AFTER our explicit stitch command (sent when clips already existed)
-          //    AND finish its turn completely (!hasStop for >= 5 ticks)?
+          //    AND finish its turn completely (idle for >= 5 ticks)?
           const minStitchedDur = minStitchedDurationSec(targetDurationSec);
           if (
             stitchCmdCount > 0 &&
             !preStitchSources.has(latestSrc) &&
-            !hasStop &&
+            agentIdle &&
             postMediaIdleTicks >= 5 &&
             (latestDur >= minStitchedDur ||
               (stitchCmdCount >= 2 && latestDur === 0 && stableN >= 5))
@@ -3254,7 +3281,7 @@ foreach ($p in $procs) {
           return acc + (d > 0 ? d : 6);
         }, 0);
 
-        if (hasStop) {
+        if (!agentIdle) {
           agentIdleTicks = 0;
           const snippet = curTxt
             ? ` · "${curTxt.slice(0, 35)}..."`
@@ -3272,7 +3299,7 @@ foreach ($p in $procs) {
           continue;
         }
 
-        // Muse agent is currently idle (!hasStop) — wait 6 consecutive idle ticks (~5.5s) before sending a follow-up command
+        // Muse agent is currently idle (no Stop button, composer present) — wait 6 consecutive idle ticks (~5.5s) before sending a follow-up command
         // so we never interrupt Muse while it transitions between generating clips and running FFmpeg.
         if (curCnt > baseAgentCnt || clipCnt > 0) {
           agentIdleTicks += 1;
