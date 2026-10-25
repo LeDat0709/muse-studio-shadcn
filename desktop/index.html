@@ -20,7 +20,7 @@
               <span class="brand-title">Muse AI Studio</span>
               <span class="brand-badge">v2.0</span>
             </div>
-            <div class="brand-subtitle">Node.js CDP · shadcn/ui</div>
+            <div class="brand-subtitle">HTTP · Noise-XX · shadcn/ui</div>
           </div>
         </div>
 
@@ -93,9 +93,9 @@
             <span>Trạng thái Engine</span>
           </div>
           <div class="sidebar-stat-row">
-            <span>Chrome CDP</span>
+            <span>Giao thức</span>
             <span id="sideCdpStatus">
-              <span class="status-dot"></span>Sẵn sàng
+              <span class="status-dot"></span>HTTP + Noise-XX
             </span>
           </div>
           <div class="sidebar-stat-row">
@@ -105,16 +105,6 @@
           <div class="sidebar-stat-row">
             <span>Luồng đang chạy</span>
             <strong id="sideRunningTasks">0 luồng</strong>
-          </div>
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 5px; margin-top: 2px">
-            <button class="btn btn-soft btn-sm" id="btnSideShowChrome" title="Hiện và xếp gọn các cửa sổ Chrome trên màn hình">
-              <svg class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
-              <span>Hiện Chrome</span>
-            </button>
-            <button class="btn btn-sm" id="btnSideHideChrome" title="Ẩn hoàn toàn cửa sổ Chrome khỏi màn hình (Chạy ngầm)">
-              <svg class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>
-              <span>Ẩn Chrome</span>
-            </button>
           </div>
           <div class="sidebar-card-title" style="margin-top: 4px">OpenAI Base URL</div>
           <div class="endpoint-box" id="copyEndpointBox" title="Bấm để sao chép Base URL">
@@ -161,14 +151,6 @@
               </div>
             </div>
             <div class="topbar-actions">
-              <button class="btn btn-soft btn-sm" id="btnShowChromeWindow" title="Hiện và xếp gọn các cửa sổ Chrome dạng lưới nhỏ trên màn hình">
-                <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>
-                <span>Hiện Chrome (Gọn)</span>
-              </button>
-              <button class="btn btn-sm" id="btnHideChromeWindow" title="Ẩn toàn bộ cửa sổ Chrome khỏi màn hình (Chạy ngầm)">
-                <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>
-                <span>Ẩn Chrome</span>
-              </button>
               <button class="btn btn-soft btn-sm" id="btnToggleBulkDrawer">
                 <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>
                 <span>Thiết lập</span>

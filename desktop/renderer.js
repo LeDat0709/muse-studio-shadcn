@@ -496,16 +496,16 @@
 
   function buildCompactRunningBadgeParts(row) {
     const pct = Math.min(99, Math.max(5, Number(row.progressPct) || 15));
-    const rawTxt = String(row.progressText || "Đang xử lý trên Chrome...");
+    const rawTxt = String(row.progressText || "Đang xử lý qua cổng HTTP + Noise-XX Gateway...");
     const secMatch = rawTxt.match(/\((\d+s)\)/);
     const elapsedPart = secMatch ? ` (${secMatch[1]})` : "";
 
     let shortLabel = "Đang tạo";
-    if (/mở cửa sổ|nạp cookie|kết nối/i.test(rawTxt)) shortLabel = "Mở Chrome";
+    if (/xác thực|kết nối|gateway|noise/i.test(rawTxt)) shortLabel = "Kết nối VM";
     else if (/tải.*ảnh|tham chiếu|upload/i.test(rawTxt)) shortLabel = "Nạp ảnh";
     else if (/gửi lệnh|nhập prompt/i.test(rawTxt)) shortLabel = "Gửi lệnh";
     else if (/ghép|stitch|ffmpeg|nối/i.test(rawTxt)) shortLabel = "Ghép video";
-    else if (/tải file|lưu|hoàn chỉnh về máy/i.test(rawTxt)) shortLabel = "Tải MP4";
+    else if (/tải.*file|tải trực tiếp|lưu/i.test(rawTxt)) shortLabel = "Tải MP4";
     else if (/phân cảnh|render|tạo video/i.test(rawTxt)) shortLabel = "Tạo cảnh";
 
     return {
@@ -541,18 +541,7 @@
 
       const cdpEl = $("#sideCdpStatus");
       if (cdpEl) {
-        const isHidden = data.settings && data.settings.showChromeWindow === false;
-        if (data.chrome_alive) {
-          cdpEl.innerHTML = `<span class="status-dot"></span>${isHidden ? "Chạy ngầm" : "Đang mở"} (:${data.cdp_port})`;
-        } else if (data.chrome_installed) {
-          cdpEl.innerHTML = `<span class="status-dot"></span>Tự bật khi chạy`;
-        } else {
-          cdpEl.innerHTML = `<span class="status-dot warn"></span>Chưa thấy Chrome`;
-        }
-      }
-
-      if (data.settings) {
-        updateChromeVisibilityButtons(data.settings.showChromeWindow !== false);
+        cdpEl.innerHTML = `<span class="status-dot"></span>HTTP + Noise-XX (No CDP)`;
       }
 
       if ($("#sideActiveAccounts")) {
@@ -1053,11 +1042,14 @@ curl ${baseUrlV1}/videos \\
             row.mediaUrl.toLowerCase().endsWith(".mp4") ||
             row.mediaUrl.toLowerCase().endsWith(".webm");
           const fileTitle = row.filename || row.productTitle || "Video";
+          const vidPreviewSrc = isVid
+            ? `${row.mediaUrl}${row.mediaUrl.includes("?") ? "&" : "?"}r=2#t=0.5`
+            : row.mediaUrl;
           resultHtml = `
             <div class="result-thumb-wrap" title="Tên file: ${escapeHtml(fileTitle)}">
               ${
                 isVid
-                  ? `<video src="${escapeHtml(row.mediaUrl)}" class="result-thumb" muted loop onmouseover="this.play()" onmouseout="this.pause()" data-row-action="preview-media" data-id="${row.id}"></video>`
+                  ? `<video src="${escapeHtml(vidPreviewSrc)}" class="result-thumb" preload="metadata" playsinline muted loop onmouseover="this.play()" onmouseout="this.pause()" data-row-action="preview-media" data-id="${row.id}"></video>`
                   : `<img src="${escapeHtml(row.mediaUrl)}" class="result-thumb" data-row-action="preview-media" data-id="${row.id}" />`
               }
               <div style="display:flex; gap:3px">
@@ -1412,11 +1404,15 @@ curl ${baseUrlV1}/videos \\
     grid.innerHTML = items
       .map((item) => {
         const kb = Math.round((item.size || 0) / 1024);
+        const vidThumbSrc =
+          item.type === "video"
+            ? `${item.url}${item.url.includes("?") ? "&" : "?"}s=${item.size || 0}#t=0.5`
+            : item.url;
         return `
           <div class="media-item">
             ${
               item.type === "video"
-                ? `<video src="${escapeHtml(item.url)}" class="media-preview" muted loop onmouseover="this.play()" onmouseout="this.pause()" data-media-preview="${escapeHtml(item.url)}" data-media-type="video" data-media-name="${escapeHtml(item.name)}"></video>`
+                ? `<video src="${escapeHtml(vidThumbSrc)}" class="media-preview" preload="metadata" playsinline muted loop onmouseover="this.play()" onmouseout="this.pause()" data-media-preview="${escapeHtml(item.url)}" data-media-type="video" data-media-name="${escapeHtml(item.name)}"></video>`
                 : `<img src="${escapeHtml(item.url)}" class="media-preview" data-media-preview="${escapeHtml(item.url)}" data-media-type="image" data-media-name="${escapeHtml(item.name)}" />`
             }
             <div class="media-meta">
@@ -1493,7 +1489,8 @@ curl ${baseUrlV1}/videos \\
     dlBtn.download = title || "muse_media";
 
     if (type === "video" || url.endsWith(".mp4") || url.endsWith(".webm")) {
-      body.innerHTML = `<video src="${escapeHtml(url)}" controls autoplay style="max-width:100%; max-height:72vh; border-radius:10px; background:#000"></video>`;
+      const freshUrl = `${url}${url.includes("?") ? "&" : "?"}t=${Date.now()}`;
+      body.innerHTML = `<video src="${escapeHtml(freshUrl)}" controls autoplay playsinline style="max-width:100%; max-height:72vh; border-radius:10px; background:#000"></video>`;
     } else {
       body.innerHTML = `<img src="${escapeHtml(url)}" style="max-width:100%; max-height:72vh; border-radius:10px" />`;
     }

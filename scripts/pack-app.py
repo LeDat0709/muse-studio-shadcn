@@ -83,10 +83,16 @@ def build_asar(src_dir: str, out_asar_path: str):
     prefix[16 : 16 + str_size] = header_json_bytes
 
     os.makedirs(os.path.dirname(out_asar_path), exist_ok=True)
-    with open(out_asar_path, "wb") as out:
+    tmp_asar_path = out_asar_path + ".tmp"
+    if os.path.exists(tmp_asar_path):
+        os.remove(tmp_asar_path)
+    with open(tmp_asar_path, "wb") as out:
         out.write(prefix)
         for b in file_buffers:
             out.write(b)
+    if os.path.exists(out_asar_path):
+        os.remove(out_asar_path)
+    os.replace(tmp_asar_path, out_asar_path)
 
     total_mb = (len(prefix) + current_offset) / (1024 * 1024)
     print(f"✅ Đã đóng gói {len(file_buffers)} file -> {out_asar_path} ({total_mb:.2f} MB)")
@@ -99,8 +105,13 @@ def main():
     orig_source = os.path.join(orig_folder, "source-code")
     new_app = os.path.join(root_dir, "Muse AI Studio.app")
 
-    # 1. Repack bug-fixed original source-code into original EM BONG AI Muse Studio.app
+    # 1. Sync updated src files and repack into original EM BONG AI Muse Studio.app
     if os.path.isdir(orig_source) and os.path.isdir(orig_app):
+        for fname in ("gateway.js", "routes.json", "engine.js", "server.js", "store.js"):
+            src_f = os.path.join(root_dir, "src", fname)
+            dst_f = os.path.join(orig_source, "src", fname)
+            if os.path.isfile(src_f) and os.path.isdir(os.path.dirname(dst_f)):
+                shutil.copy2(src_f, dst_f)
         orig_asar = os.path.join(orig_app, "Contents", "Resources", "app.asar")
         build_asar(orig_source, orig_asar)
 
@@ -142,7 +153,9 @@ def main():
 set -e
 DIR="$(cd "$(dirname "$0")" && pwd)"
 APP="$DIR/Muse AI Studio.app"
-echo "Đang gỡ chặn Gatekeeper (nếu có) và mở Muse AI Studio v2.0 (shadcn/ui)..."
+echo "Đang làm mới tiến trình và mở Muse AI Studio v2.0 (shadcn/ui)..."
+pkill -f "Muse AI Studio.app/Contents/MacOS/Electron" 2>/dev/null || true
+sleep 0.5
 xattr -cr "$APP" 2>/dev/null || true
 chmod +x "$APP/Contents/MacOS/Electron" 2>/dev/null || true
 open "$APP"

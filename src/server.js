@@ -336,8 +336,8 @@ class MuseServer {
       }
     }
 
-    // Media file serving
-    if (req.method === "GET" && pathname.startsWith("/v1/media/")) {
+    // Media file serving (with full HTTP 206 Range support for MP4 moov seeking & streaming)
+    if ((req.method === "GET" || req.method === "HEAD") && pathname.startsWith("/v1/media/")) {
       const filename = path.basename(decodeURIComponent(pathname.slice("/v1/media/".length)));
       const fullPath = path.join(this.store.mediaDir, filename);
       if (!fs.existsSync(fullPath)) {
@@ -345,13 +345,57 @@ class MuseServer {
       }
       const ext = path.extname(fullPath).toLowerCase();
       const stat = fs.statSync(fullPath);
+      const total = stat.size;
+      const contentType = MIME_TYPES[ext] || "application/octet-stream";
+      const rangeHeader = req.headers.range;
+
+      if (rangeHeader && total > 0) {
+        const match = /^bytes=(\d*)-(\d*)$/i.exec(String(rangeHeader).trim());
+        if (match) {
+          let start = match[1] ? parseInt(match[1], 10) : 0;
+          let end = match[2] ? parseInt(match[2], 10) : total - 1;
+          if (!match[1] && match[2]) {
+            start = Math.max(0, total - parseInt(match[2], 10));
+            end = total - 1;
+          }
+          if (start >= total || end >= total || start > end) {
+            res.writeHead(416, {
+              "Content-Range": `bytes */${total}`,
+              "Access-Control-Allow-Origin": "*",
+            });
+            res.end();
+            return;
+          }
+          const chunkSize = end - start + 1;
+          res.writeHead(206, {
+            "Content-Range": `bytes ${start}-${end}/${total}`,
+            "Accept-Ranges": "bytes",
+            "Content-Length": chunkSize,
+            "Content-Type": contentType,
+            "Access-Control-Allow-Origin": "*",
+            "Cache-Control": "no-cache",
+          });
+          if (req.method === "HEAD") {
+            res.end();
+          } else {
+            fs.createReadStream(fullPath, { start, end }).pipe(res);
+          }
+          return;
+        }
+      }
+
       res.writeHead(200, {
-        "Content-Type": MIME_TYPES[ext] || "application/octet-stream",
-        "Content-Length": stat.size,
+        "Content-Type": contentType,
+        "Content-Length": total,
+        "Accept-Ranges": "bytes",
         "Access-Control-Allow-Origin": "*",
-        "Cache-Control": "public, max-age=86400",
+        "Cache-Control": "no-cache",
       });
-      fs.createReadStream(fullPath).pipe(res);
+      if (req.method === "HEAD") {
+        res.end();
+      } else {
+        fs.createReadStream(fullPath).pipe(res);
+      }
       return;
     }
 
@@ -363,11 +407,6 @@ class MuseServer {
 
     // ==================== ADMIN API ====================
     if (pathname === "/admin/status" && req.method === "GET") {
-      const chromeAlive = await this.engine.isChromeAlive();
-      if (chromeAlive && typeof this.engine.syncActiveBrowserSession === "function") {
-        this.engine.syncActiveBrowserSession().catch(() => {});
-      }
-      const chromeBin = findChromeBinary(this.engine.chromeBin);
       const runningTasks = this.store
         .listTasks(30)
         .filter((t) => t.status === "running")
@@ -378,16 +417,16 @@ class MuseServer {
           prompt: t.prompt,
           account_id: t.account_id,
           progress: t.progress || 10,
-          progress_text: t.progress_text || "Đang xử lý trên Chrome...",
+          progress_text: t.progress_text || "Đang xử lý qua cổng HTTP + Noise-XX Gateway...",
         }));
       return this._sendJson(res, 200, {
         ok: true,
         base_url: this.baseUrl,
         api_key: this.store.settings.apiKey,
-        chrome_alive: chromeAlive,
-        chrome_installed: Boolean(chromeBin),
-        chrome_bin: chromeBin,
-        cdp_port: this.engine.cdpPort,
+        engine_mode: "http_noise_gateway",
+        chrome_alive: true,
+        chrome_installed: true,
+        cdp_port: 0,
         active_tasks: this.engine.activeCount,
         running_tasks: runningTasks,
         max_concurrency: this.store.settings.maxConcurrency || 3,

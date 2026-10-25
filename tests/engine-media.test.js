@@ -7,7 +7,12 @@ const http = require("http");
 const os = require("os");
 const path = require("path");
 const { Store } = require("../src/store");
-const { MuseEngine, minStitchedDurationSec } = require("../src/engine");
+const {
+  MuseEngine,
+  minStitchedDurationSec,
+  isUnfinishedMp4,
+  downloadFinishedMedia,
+} = require("../src/engine");
 
 // Stands in for the Muse tab: hands out the tab's cookies, answers the in-page media-prepare script,
 // then serves the base64 in slices (the fallback path).
@@ -109,4 +114,58 @@ test("a single follow-up clip is not accepted as the stitched long video", () =>
   assert.ok(minStitchedDurationSec(60) > 11, "60s order: an 11s clip is rejected");
   assert.ok(minStitchedDurationSec(60) <= 45, "60s order: a 45s stitched video is still accepted");
   assert.ok(minStitchedDurationSec(20) <= 15, "20s order: a 15s stitched video is still accepted");
+});
+
+function box(type, payload = Buffer.alloc(0), declaredSize) {
+  const head = Buffer.alloc(8);
+  head.writeUInt32BE(declaredSize ?? 8 + payload.length, 0);
+  head.write(type, 4, "latin1");
+  return Buffer.concat([head, payload]);
+}
+
+const FTYP = box("ftyp", Buffer.from("isom\0\0\x02\0isomiso2avc1mp41", "latin1"));
+const FRAMES = Buffer.alloc(4096, 7);
+const FINISHED_MP4 = Buffer.concat([FTYP, box("free"), box("mdat", FRAMES), box("moov", Buffer.alloc(64))]);
+// What ffmpeg has on disk mid-render: mdat size still the 0 placeholder, no moov yet.
+const RENDERING_MP4 = Buffer.concat([FTYP, box("free"), box("mdat", FRAMES, 0)]);
+
+test("only a finalised MP4 counts as finished", () => {
+  assert.strictEqual(isUnfinishedMp4(FINISHED_MP4), false);
+  assert.strictEqual(isUnfinishedMp4(RENDERING_MP4), true, "ffmpeg still writing");
+  assert.strictEqual(isUnfinishedMp4(FINISHED_MP4.subarray(0, 2000)), true, "cut off mid-mdat");
+  assert.strictEqual(isUnfinishedMp4(Buffer.concat([FTYP, box("mdat", FRAMES)])), true, "no moov");
+
+  const largeMdat = Buffer.alloc(16);
+  largeMdat.writeUInt32BE(1, 0);
+  largeMdat.write("mdat", 4, "latin1");
+  largeMdat.writeBigUInt64BE(BigInt(16 + FRAMES.length), 8);
+  const finished64 = Buffer.concat([FTYP, largeMdat, FRAMES, box("moov", Buffer.alloc(8))]);
+  assert.strictEqual(isUnfinishedMp4(finished64), false, "64-bit mdat size");
+
+  assert.strictEqual(isUnfinishedMp4(Buffer.from("\x89PNG\r\n\x1a\n-not-mp4", "latin1")), false);
+});
+
+test("a video still being rendered on the VM is re-downloaded until it is finished", async () => {
+  const served = [RENDERING_MP4, RENDERING_MP4, FINISHED_MP4];
+  let calls = 0;
+  const waits = [];
+
+  const media = await downloadFinishedMedia(
+    async () => ({ buffer: served[calls++], mime: "video/mp4" }),
+    { deadlineMs: Date.now() + 60000, pollMs: 1, onWait: (bytes) => waits.push(bytes) }
+  );
+
+  assert.strictEqual(media.buffer, FINISHED_MP4);
+  assert.strictEqual(calls, 3);
+  assert.deepStrictEqual(waits, [RENDERING_MP4.length, RENDERING_MP4.length]);
+});
+
+test("a render that never finishes fails instead of saving a broken video", async () => {
+  await assert.rejects(
+    downloadFinishedMedia(async () => ({ buffer: RENDERING_MP4, mime: "video/mp4" }), {
+      deadlineMs: Date.now() + 20,
+      pollMs: 5,
+    }),
+    /chưa ghi xong/
+  );
 });
