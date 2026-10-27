@@ -9,7 +9,8 @@
     "dev": "node src/cli.js",
     "test": "node --test tests/*.test.js",
     "pack:mac": "python3 scripts/pack-app.py",
-    "dist:win": "electron-builder --win portable --x64 --publish never"
+    "dist:win": "electron-builder --win portable --x64 --publish never",
+    "spider": "graphify update . && node tools/graph-spider.js"
   },
   "devDependencies": {
     "electron": "43.4.0",
