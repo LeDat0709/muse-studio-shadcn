@@ -3326,10 +3326,6 @@ foreach ($p in $procs) {
       }
     }
 
-    if (all && this.activeRunners.size === 0) {
-      this.activeCount = 0;
-    }
-
     return {
       cancelledCount: cancelledTaskIds.length,
       cancelledTaskIds,

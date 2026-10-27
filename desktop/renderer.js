@@ -1383,7 +1383,14 @@ curl ${baseUrlV1}/videos \\
         ? window.MusePromptLines.splitPromptLines($("#bulkVideoPromptsInput")?.value)
         : [];
 
-    selected.filter((r) => r.status !== "done").forEach((r, idx) => {
+    // Finished rows keep the prompt and settings their video was made with.
+    const editable = selected.filter((r) => r.status !== "done");
+    const skippedDone = selected.length - editable.length;
+    if (!editable.length) {
+      showToast("Các luồng đã chọn đều đã hoàn tất, không sửa luồng nào.", true);
+      return;
+    }
+    editable.forEach((r, idx) => {
       if (state.promptMode === "lines" && linePrompts.length > 0) {
         r.prompt = linePrompts[idx % linePrompts.length];
       } else if (fixedVidPrompt.trim()) {
@@ -1410,9 +1417,9 @@ curl ${baseUrlV1}/videos \\
     saveBatchRows();
     renderBatchTable();
     showToast(
-      `Đã cập nhật Prompt & Cấu hình cho ${selected.length} luồng đã chọn${
+      `Đã cập nhật Prompt & Cấu hình cho ${editable.length} luồng đã chọn${
         runningSelected.length > 0 ? ` (đã dừng ${runningSelected.length} luồng đang chạy)` : ""
-      }!`
+      }${skippedDone > 0 ? `, bỏ qua ${skippedDone} luồng đã hoàn tất` : ""}!`
     );
   }
 
@@ -1579,7 +1586,8 @@ curl ${baseUrlV1}/videos \\
       renderBatchTable();
       loadStatus();
     } catch (err) {
-      if (isStale() || /Đã dừng bởi người dùng|cancelled/i.test(String(err?.message || ""))) {
+      if (isStale()) return;
+      if (/Đã dừng bởi người dùng|cancelled/i.test(String(err?.message || ""))) {
         row.status = row.mediaUrl ? "done" : "idle";
         row.error = "";
         row.progressPct = 0;

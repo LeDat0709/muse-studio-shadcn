@@ -1068,8 +1068,10 @@ Yêu cầu bắt buộc:
     }
 
     if (pathname === "/admin/generate/cancel" && req.method === "POST") {
-      const body = await this._readJson(req);
-      const all = Boolean(body.all);
+      const raw = await this._readJson(req);
+      const body = raw && typeof raw === "object" && !Array.isArray(raw) ? raw : {};
+      // Only a literal true stops everything; "false" or 1 must not cancel every job.
+      const all = body.all === true;
       const jobIds = Array.isArray(body.jobIds)
         ? body.jobIds.map((x) => String(x || "").trim()).filter(Boolean)
         : body.jobId
