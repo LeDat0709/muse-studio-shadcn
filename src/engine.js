@@ -249,155 +249,6 @@ async function downloadFinishedMedia(download, { deadlineMs, pollMs = MEDIA_FINA
   }
 }
 
-function buildProbeVideoDurationJs(targetSrc) {
-  return `
-(async () => {
-  const src = ${JSON.stringify(targetSrc)};
-  if (!src) return 0;
-  const domVids = Array.from(document.querySelectorAll('video'));
-  const existing = domVids.find(v => (v.currentSrc || v.src || '') === src);
-  if (existing && Number.isFinite(existing.duration) && existing.duration > 0) {
-    return Math.round(existing.duration * 10) / 10;
-  }
-  return await new Promise((resolve) => {
-    const v = document.createElement('video');
-    v.preload = 'metadata';
-    v.muted = true;
-    let done = false;
-    const finish = (val) => {
-      if (done) return;
-      done = true;
-      try { v.removeAttribute('src'); v.load(); } catch (_) {}
-      resolve(val);
-    };
-    const timer = setTimeout(() => finish(0), 4000);
-    v.onloadedmetadata = () => {
-      clearTimeout(timer);
-      const d = Number.isFinite(v.duration) && v.duration > 0 ? Math.round(v.duration * 10) / 10 : 0;
-      finish(d);
-    };
-    v.onerror = () => {
-      clearTimeout(timer);
-      finish(0);
-    };
-    v.src = src;
-  });
-})()
-`;
-}
-
-const JS_POLL_AGENT_STATUS = `
-(() => {
-  const scope = document.querySelector('main, [class*="chat-scroll"], [class*="hatch-chat-scroll"]') || document.body;
-  if (!scope) {
-    return { cnt: 0, total: 0, txt: '', stop: false, tail: '', statusStep: '', productTitle: '', hasInput: false };
-  }
-  const bs = Array.from(scope.querySelectorAll('div[class*="hatch-chat-groupable-bubble"]'))
-    .filter(b => /hatch-agent-bubble-bg/.test(b.className || ''));
-  const nonEmpty = bs.filter(b => (b.innerText || '').trim().length > 0);
-  const lastTxt = nonEmpty.length ? (nonEmpty[nonEmpty.length - 1].innerText || '').trim() : '';
-  let productTitle = '';
-  for (const b of nonEmpty) {
-    const t = b.innerText || '';
-    const m = t.match(/\\[\\[?\\s*PRODUCT_TITLE\\s*:\\s*([^\\]\\n]+?)\\s*\\]?\\]/i);
-    if (m && m[1]) {
-      productTitle = m[1].trim();
-    }
-  }
-  const statusEl = document.querySelector('[data-testid="hatch-status-panel-sliding-surface"]');
-  const statusHasSpinner = Boolean(
-    statusEl &&
-      statusEl.querySelector(
-        '.animate-spin, svg.animate-spin, [role="progressbar"], [data-testid*="loading" i], [data-testid*="spinner" i]'
-      )
-  );
-  const hasStop = Boolean(
-    document.querySelector('[data-testid="hatch-composer-stop-button"]') ||
-    document.querySelector('button[aria-label*="Stop" i]') ||
-    document.querySelector('button[aria-label*="停止"]') ||
-    statusHasSpinner
-  );
-  const statusLines = statusEl
-    ? (statusEl.innerText || '')
-        .split('\\n')
-        .map(s => s.trim())
-        .filter(Boolean)
-    : [];
-  let statusStep = '';
-  if (statusLines.length > 1) {
-    const filtered = statusLines.filter(l => l !== 'Muse' && l !== '🎬' && l !== 'Today');
-    statusStep = filtered.slice(0, 2).join(' · ');
-  }
-  const tail = document.body ? (document.body.innerText || '').slice(-700) : '';
-  return {
-    cnt: nonEmpty.length,
-    total: bs.length,
-    txt: lastTxt,
-    stop: hasStop,
-    statusStep,
-    tail,
-    productTitle,
-    hasInput: Boolean(document.querySelector('textarea')),
-  };
-})()
-`;
-
-const JS_CLEAR_ATTACHMENTS = `
-(() => {
-  const btns = Array.from(document.querySelectorAll('button[aria-label]')).filter(b => {
-    const al = b.getAttribute('aria-label') || '';
-    return /remove\\s*attachment|移除附件|删除附件|移除|删除/i.test(al);
-  });
-  btns.forEach(b => b.click());
-  Array.from(document.querySelectorAll('input[type="file"]')).forEach(inp => { inp.value = ''; });
-  return btns.length;
-})()
-`;
-
-function buildInjectAttachmentsJs(items) {
-  return `
-(() => {
-  try {
-    const rawItems = ${JSON.stringify(items)};
-    const inputs = Array.from(document.querySelectorAll('input[type="file"]'));
-    if (!inputs.length) return { ok: false, err: 'no-file-input' };
-    const ov = document.querySelector('[data-testid="hatch-composer-placeholder-overlay"]');
-    const composer = ov ? ov.closest('form') : null;
-    let input = null;
-    if (composer) {
-      input = inputs.find(x => composer.contains(x)) || null;
-    }
-    if (!input) {
-      input = inputs.find(x => !x.closest('[class*="chat-user-bubble"], [class*="group/msg"]')) || inputs[0];
-    }
-    if (!input.getAttribute('accept')) input.setAttribute('accept', 'image/*');
-    input.multiple = true;
-
-    const dt = new DataTransfer();
-    rawItems.forEach((item, idx) => {
-      const byteChars = atob(item.b64);
-      const bytes = new Uint8Array(byteChars.length);
-      for (let i = 0; i < byteChars.length; i++) bytes[i] = byteChars.charCodeAt(i);
-      const mime = item.mime || 'image/png';
-      const blob = new Blob([bytes], { type: mime });
-      let ext = (mime.split('/')[1] || 'png').toLowerCase();
-      if (ext === 'jpeg') ext = 'jpg';
-      const fileName = item.name || ('reference_' + (idx + 1) + '.' + ext);
-      const file = new File([blob], fileName, { type: mime });
-      dt.items.add(file);
-    });
-
-    input.files = dt.files;
-    input.dispatchEvent(new Event('change', { bubbles: true }));
-    input.dispatchEvent(new Event('input', { bubbles: true }));
-    return { ok: true, count: rawItems.length };
-  } catch (e) {
-    return { ok: false, err: String(e) };
-  }
-})()
-`;
-}
-
 function buildPrepareMediaChunksJs(src, storeKey) {
   return `
 (async () => {
@@ -452,7 +303,6 @@ class MuseEngine {
     this.knownCdpPorts = new Set([this.cdpPort]);
     this.pendingLoginPorts = new Set();
     this._openTabChain = Promise.resolve();
-    this._accountSendChains = new Map();
     this.activeCount = 0;
     this.activeRunners = new Map();
     this.busyTabIds = new Set();
@@ -498,14 +348,6 @@ class MuseEngine {
   _withOpenTabLock(fn) {
     const next = this._openTabChain.then(() => fn());
     this._openTabChain = next.catch(() => {});
-    return next;
-  }
-
-  _withAccountSendLock(accountId, fn) {
-    const key = String(accountId || "default");
-    const prev = this._accountSendChains.get(key) || Promise.resolve();
-    const next = prev.then(() => fn());
-    this._accountSendChains.set(key, next.catch(() => {}));
     return next;
   }
 
@@ -1883,22 +1725,6 @@ foreach ($p in $procs) {
     };
   }
 
-  async _syncRefreshedCookies(cdp, account, vmState = "RUNNING") {
-    try {
-      const res = await cdp.send("Network.getCookies", {
-        urls: ["https://muse.ai", "https://www.muse.ai"],
-      });
-      const museCookies = (res.cookies || []).filter((c) =>
-        String(c.domain || "").includes("muse.ai")
-      );
-      if (museCookies.length > 0 && museCookies.some((c) => c.name === "hatch_sess" && c.value)) {
-        this.store.updateAccountCookies(account.id, museCookies, "", vmState);
-      }
-    } catch (_err) {
-      // ignore
-    }
-  }
-
   /**
    * Pure Node.js HTTP Fast-Path for Account Session Check & 48h VM Wake (No Chrome Needed!)
    */
@@ -2306,91 +2132,6 @@ foreach ($p in $procs) {
     return clicked;
   }
 
-  async _tryClickRetrySendButton(cdp) {
-    try {
-      return await cdp.evaluate(`
-        (() => {
-          const btns = Array.from(document.querySelectorAll('button, [role="button"]')).filter(b => b.offsetParent !== null);
-          const retryBtn = btns.find(b => {
-            const txt = ((b.innerText || '') + ' ' + (b.getAttribute('aria-label') || '') + ' ' + (b.getAttribute('title') || '')).trim();
-            return /retry|resend|try\\s*again|重试|重新发送/i.test(txt);
-          });
-          if (retryBtn) {
-            retryBtn.click();
-            return true;
-          }
-          return false;
-        })()
-      `);
-    } catch (_err) {
-      return false;
-    }
-  }
-
-  async _attachReferenceImages(cdp, refImages = []) {
-    const valid = (refImages || []).filter((img) => img && img.b64);
-    if (!valid.length) return;
-    await cdp.send("Emulation.setFocusEmulationEnabled", { enabled: true }).catch(() => {});
-    await cdp.evaluate(JS_CLEAR_ATTACHMENTS);
-    await new Promise((r) => setTimeout(r, 300));
-
-    const payload = valid.map((img, i) => ({
-      b64: img.b64,
-      mime: img.mime || "image/png",
-      name: img.name || `reference_${i + 1}.png`,
-    }));
-
-    let injectRes = await cdp.evaluate(buildInjectAttachmentsJs(payload));
-    if (!injectRes || !injectRes.ok) {
-      throw new Error(`Không đính kèm được ảnh tham chiếu vào Muse.ai (${injectRes?.err || "unknown"})`);
-    }
-
-    // Allow React to mount attachment thumbnails and any upload progress indicators
-    await new Promise((r) => setTimeout(r, 750));
-
-    const deadline = Date.now() + 22000;
-    let confirmed = false;
-    let retriedInject = false;
-    const startWait = Date.now();
-
-    while (Date.now() < deadline) {
-      const attachState = await cdp.evaluate(`
-        (() => {
-          const btns = Array.from(document.querySelectorAll('button[aria-label]'));
-          const hasRemove = btns.some(b => /remove\\s*attachment|移除附件|删除附件/i.test(b.getAttribute('aria-label') || ''));
-          const ov = document.querySelector('[data-testid="hatch-composer-placeholder-overlay"]');
-          const composer = ov ? (ov.closest('form') || ov.parentElement?.parentElement?.parentElement) : document.querySelector('form');
-          const hasThumb = Boolean(composer && composer.querySelectorAll('img, video').length > 0);
-          const hasSpinner = Boolean(
-            composer &&
-            composer.querySelector('[role="progressbar"], .animate-spin, svg.animate-spin')
-          );
-          if ((hasRemove || hasThumb) && !hasSpinner) return 'ready';
-          if (hasRemove || hasThumb) return 'uploading';
-          return '';
-        })()
-      `);
-      if (attachState === "ready") {
-        confirmed = true;
-        break;
-      }
-      if (!attachState && !retriedInject && Date.now() - startWait > 5000) {
-        retriedInject = true;
-        await cdp.evaluate(buildInjectAttachmentsJs(payload)).catch(() => {});
-      }
-      if (attachState === "uploading" && Date.now() - startWait > 7500) {
-        confirmed = true;
-        break;
-      }
-      await new Promise((r) => setTimeout(r, 350));
-    }
-    if (!confirmed) {
-      throw new Error("Tải ảnh tham chiếu lên Muse.ai chưa được xác nhận (timeout)");
-    }
-    // Wait for Muse.ai blob upload to finalize before clicking Send
-    await new Promise((r) => setTimeout(r, 2000));
-  }
-
   _normalizeProductVideoTitle(rawExtracted = "", fallbackFileBase = "") {
     let extracted = String(rawExtracted || "")
       .replace(/^[\s"'«»“”‘’\[\]]+|[\s"'«»“”‘’\[\]]+$/g, "")
@@ -2415,83 +2156,6 @@ foreach ($p in $procs) {
       .replace(/^[.\s]+|[.\s]+$/g, "")
       .slice(0, 180)
       .trim();
-  }
-
-  async _extractProductTitleFallback(cdp, productRefImg = null) {
-    try {
-      const stNow = (await cdp.evaluate(JS_POLL_AGENT_STATUS)) || {};
-      if (stNow.productTitle) {
-        return String(stNow.productTitle).trim();
-      }
-    } catch (_e) {
-      // ignore
-    }
-
-    // Optional fast path via Gemini Vision if API key is configured
-    const geminiKey = String(this.store.settings.geminiApiKey || "").trim();
-    const geminiModel = String(this.store.settings.geminiModel || "gemini-2.5-flash").trim();
-    if (geminiKey && productRefImg && productRefImg.b64) {
-      try {
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(
-            geminiModel
-          )}:generateContent?key=${encodeURIComponent(geminiKey)}`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              contents: [
-                {
-                  parts: [
-                    {
-                      text: 'Đọc bức ảnh sản phẩm này và trả về DUY NHẤT dòng chữ Tên/Tiêu đề sản phẩm hiển thị trong ảnh (ví dụ: "DKHOUSE Nồi Điện 1.8L Đa Năng, Nồi Cơm, Nồi Áp Suất Nấu Các Món, Tặng Vỉ Hấp"). Bỏ qua nhãn phụ đầu dòng như "Star Shop", "Mall", "Yêu thích", giá tiền hay nút bấm. Nếu ảnh chỉ chụp vật thể không có chữ tên sản phẩm thì trả về đúng chữ NONE.',
-                    },
-                    {
-                      inlineData: {
-                        mimeType: productRefImg.mime || "image/jpeg",
-                        data: productRefImg.b64,
-                      },
-                    },
-                  ],
-                },
-              ],
-              generationConfig: { temperature: 0.1 },
-            }),
-            signal: AbortSignal.timeout(10000),
-          }
-        );
-        if (res.ok) {
-          const data = await res.json().catch(() => ({}));
-          const txt = (data.candidates?.[0]?.content?.parts?.[0]?.text || "").trim();
-          const m = txt.match(/\[\[?\s*PRODUCT_TITLE\s*:\s*([^\]\n]+?)\s*\]?\]/i);
-          const candidate = (m ? m[1] : txt.split("\n")[0] || "").trim();
-          if (candidate) return candidate;
-        }
-      } catch (_e) {
-        // ignore and use Muse.ai fallback
-      }
-    }
-
-    // Fast fallback on the already-open Muse.ai thread
-    try {
-      const askTitlePrompt =
-        `Hãy nhìn vào bức ảnh sản phẩm đính kèm ở đầu cuộc trò chuyện và chỉ trả lời duy nhất 1 dòng theo đúng cú pháp: ` +
-        `[[PRODUCT_TITLE: nguyên văn 100% tên tiêu đề sản phẩm trong ảnh]] ` +
-        `(bỏ qua nhãn phụ đầu dòng như Star Shop/Mall; nếu trong ảnh không có chữ tên sản phẩm thì in [[PRODUCT_TITLE: NONE]]). ` +
-        `Tuyệt đối không gọi bất kỳ tool tạo ảnh hay video nào.`;
-      await this._sendPromptToMuse(cdp, askTitlePrompt);
-      const deadline = Date.now() + 14000;
-      while (Date.now() < deadline) {
-        await new Promise((r) => setTimeout(r, 650));
-        const st = (await cdp.evaluate(JS_POLL_AGENT_STATUS)) || {};
-        if (st.productTitle) {
-          return String(st.productTitle).trim();
-        }
-      }
-    } catch (_e) {
-      // ignore
-    }
-    return "";
   }
 
   // Streams an http(s) media URL straight to disk with the tab's own cookies, so a 4K video is never held in
@@ -2596,16 +2260,6 @@ foreach ($p in $procs) {
       await new Promise((r) => setTimeout(r, 1500));
     }
     throw new Error(`Không tải được file ${expect} từ Muse.ai: ${lastErr}`);
-  }
-
-  async _probeVideoDuration(cdp, videoSrc) {
-    if (!videoSrc) return 0;
-    try {
-      const dur = await cdp.evaluate(buildProbeVideoDurationJs(videoSrc), true, 6000);
-      return Number.isFinite(dur) && dur > 0 ? Number(dur) : 0;
-    } catch (_err) {
-      return 0;
-    }
   }
 
   /**

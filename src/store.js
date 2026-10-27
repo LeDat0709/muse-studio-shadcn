@@ -634,10 +634,6 @@ class Store {
     }
   }
 
-  markSuccess(accId) {
-    this.markLive(accId);
-  }
-
   markDie(accId, reason = "Cookie hết hạn hoặc bị đăng xuất (DIE)") {
     const acc = this.getAccount(accId);
     if (acc) {
