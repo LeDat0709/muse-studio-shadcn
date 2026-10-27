@@ -936,6 +936,8 @@ Yêu cầu bắt buộc:
         }
       }
 
+      // The engine sanitises the name; only a string is passed on.
+      const outputName = typeof body.outputName === "string" ? body.outputName : "";
       const runGenerationPayload = async (onProgress) => {
         if (mode === "image") {
           const out = await this.engine.generateImage({
@@ -946,6 +948,7 @@ Yêu cầu bắt buộc:
             referenceImages: refList,
             accountId: body.accountId || "",
             rowId: body.rowId || "",
+            outputName,
             onProgress,
           });
           return {
@@ -982,6 +985,7 @@ Yêu cầu bắt buộc:
           referenceImages: refList,
           accountId: body.accountId || "",
           rowId: body.rowId || "",
+          outputName,
           onProgress,
         });
         return {

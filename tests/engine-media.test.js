@@ -12,7 +12,20 @@ const {
   minStitchedDurationSec,
   isUnfinishedMp4,
   downloadFinishedMedia,
+  outputFileBase,
 } = require("../src/engine");
+
+test("a user-chosen output name becomes a safe file base on macOS and Windows", () => {
+  assert.strictEqual(outputFileBase("  Nồi chiên 01  "), "Nồi chiên 01");
+  assert.strictEqual(outputFileBase("quang-cao.mp4"), "quang-cao", "the real extension comes from the media");
+  assert.strictEqual(outputFileBase("../../etc/passwd"), "-..-etc-passwd", "no folder escape");
+  assert.strictEqual(outputFileBase('a:b*c?"d<e>f|g\\h'), "a-b-c--d-e-f-g-h");
+  assert.strictEqual(outputFileBase("CON"), "CON_", "Windows reserved device name");
+  assert.strictEqual(outputFileBase("ten."), "ten", "Windows drops a trailing dot");
+  assert.strictEqual(outputFileBase("x".repeat(300)).length, 120);
+  assert.strictEqual(outputFileBase("   "), "");
+  assert.strictEqual(outputFileBase(undefined), "");
+});
 
 // Stands in for the Muse tab: hands out the tab's cookies, answers the in-page media-prepare script,
 // then serves the base64 in slices (the fallback path).

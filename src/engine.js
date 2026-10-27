@@ -180,6 +180,24 @@ function reserveUniqueFile(dir, base, ext) {
   }
 }
 
+const MAX_OUTPUT_NAME = 120;
+const OUTPUT_MEDIA_EXT = /\.(mp4|mov|webm|mkv|png|jpe?g|webp|gif)$/i;
+const WINDOWS_RESERVED_NAME = /^(con|prn|aux|nul|com[1-9]|lpt[1-9])$/i;
+
+// The user's own name for an output file, made safe on macOS and Windows: no folders, no reserved device
+// names, no extension (the real one comes from the media). "" means "let the engine pick a name".
+function outputFileBase(name) {
+  const base = String(name || "")
+    .replace(/[<>:"/\\|?*\x00-\x1f]/g, "-")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(OUTPUT_MEDIA_EXT, "")
+    .replace(/^[.\s]+/, "")
+    .slice(0, MAX_OUTPUT_NAME)
+    .replace(/[.\s]+$/, "");
+  return WINDOWS_RESERVED_NAME.test(base) ? `${base}_` : base;
+}
+
 function mediaExtFor(mime, expect) {
   const m = String(mime || "").toLowerCase();
   if (m.includes("mp4")) return ".mp4";
@@ -2276,6 +2294,7 @@ foreach ($p in $procs) {
     referenceImages = [],
     accountId = "",
     rowId = "",
+    outputName = "",
     onProgress = null,
   }) {
     const account = accountId
@@ -2862,8 +2881,12 @@ foreach ($p in $procs) {
       });
       checkCancelled();
       const prefix = expect === "video" ? "vid" : "img";
+      const chosenBase = outputFileBase(outputName);
+      if (chosenBase) {
+        this.log(`[${account.name}] 🏷️ Đặt tên file ${expect.toUpperCase()} theo tên bạn đặt: "${chosenBase}"`);
+      }
       const base =
-        preferredMediaTitle || `${prefix}_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
+        chosenBase || preferredMediaTitle || `${prefix}_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
       const ext = mediaExtFor(mime || matchedMedia.path || matchedMedia.url, expect);
       const filename = reserveUniqueFile(this.store.mediaDir, base, ext);
       const fullPath = path.join(this.store.mediaDir, filename);
@@ -3076,4 +3099,5 @@ module.exports = {
   minStitchedDurationSec,
   isUnfinishedMp4,
   downloadFinishedMedia,
+  outputFileBase,
 };

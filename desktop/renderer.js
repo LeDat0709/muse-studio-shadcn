@@ -226,6 +226,7 @@
       error: "",
       mediaUrl: "",
       filename: "",
+      outputName: "",
     };
   }
 
@@ -1095,6 +1096,8 @@ curl ${baseUrlV1}/videos \\
       ${row.status === "error" && row.error ? `<p class="preview-error">${escapeHtml(row.error)}</p>` : ""}
       <label class="field-label" for="previewPrompt">Prompt (Có thể sửa trực tiếp ngay cả khi đang chạy)</label>
       <textarea id="previewPrompt" class="textarea preview-prompt row-prompt-input" data-id="${row.id}" spellcheck="false" placeholder="Nhập prompt cho luồng này…">${escapeHtml(row.prompt)}</textarea>
+      <label class="field-label" for="previewOutputName">Tên file đầu ra (tuỳ chọn)</label>
+      <input id="previewOutputName" class="input row-output-name-input" data-id="${row.id}" maxlength="120" spellcheck="false" placeholder="Để trống thì app tự đặt tên" title="Trùng tên thì file sau được thêm (2), (3)…" value="${escapeHtml(row.outputName || "")}" />
       <div class="preview-settings">${rowSettingsSelects(row)}</div>
       <span class="field-label">Ảnh tham chiếu</span>
       ${rowRefSlots(row)}
@@ -1513,6 +1516,7 @@ curl ${baseUrlV1}/videos \\
           referenceImages: refImgs,
           linkedImageFilename: row.referenceImage?.linkedFilename || row.linkedImageFilename || "",
           accountId: row.accountId || "",
+          outputName: row.outputName || "",
         },
       });
 
@@ -2406,6 +2410,9 @@ curl ${baseUrlV1}/videos \\
         row.prompt = t.value;
         const listText = document.querySelector(`.queue-item[data-row-id="${id}"] .queue-prompt`);
         if (listText) listText.textContent = shortPrompt(t.value) || "Chưa có prompt";
+        scheduleSaveBatchRows();
+      } else if (t.classList.contains("row-output-name-input")) {
+        row.outputName = t.value;
         scheduleSaveBatchRows();
       }
     });
