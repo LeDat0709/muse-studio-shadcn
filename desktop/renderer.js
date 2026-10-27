@@ -128,8 +128,8 @@
     const el = $("#bulkVideoPromptsInput");
     if (state.promptMode === "lines") {
       // Rows made outside the list (a product, "Thêm 1 luồng") take the list's first prompt.
-      const lines = window.MusePromptLines.splitPromptLines(el ? el.value : "");
-      return lines[0] || String(localStorage.getItem(PROMPT_SINGLE_KEY) || "").trim();
+      const [first] = window.MusePromptLines.splitNamedPromptLines(el ? el.value : "");
+      return first ? first.prompt : String(localStorage.getItem(PROMPT_SINGLE_KEY) || "").trim();
     }
     return String(el ? el.value : localStorage.getItem(PROMPT_SINGLE_KEY) || "").trim();
   }
@@ -146,16 +146,19 @@
       if (label) label.textContent = "Chỉ thêm vào hàng đợi";
       return;
     }
-    const count = window.MusePromptLines.splitPromptLines($("#bulkVideoPromptsInput")?.value).length;
+    const lines = window.MusePromptLines.splitNamedPromptLines($("#bulkVideoPromptsInput")?.value);
+    const count = lines.length;
+    const named = lines.filter((l) => l.name).length;
     const repeat = promptRepeat();
     const total = count * repeat;
     if (hint) {
+      const namedNote = named > 0 ? `, ${named} dòng có tên file` : "";
       hint.textContent =
         count === 0
-          ? "Chưa có prompt nào. Mỗi dòng sẽ thành một luồng."
+          ? "Chưa có prompt nào. Mỗi dòng sẽ thành một luồng; muốn đặt tên file thì gõ: tên-file | prompt"
           : repeat > 1
-          ? `${count} prompt, lặp ${repeat} lần: ${total} luồng`
-          : `${count} prompt: ${count} luồng`;
+          ? `${count} prompt${namedNote}, lặp ${repeat} lần: ${total} luồng`
+          : `${count} prompt${namedNote}: ${count} luồng`;
     }
     if (label) label.textContent = total > 0 ? `Thêm ${total} luồng vào hàng đợi` : "Thêm vào hàng đợi";
   }
@@ -172,7 +175,7 @@
         : localStorage.getItem(PROMPT_SINGLE_KEY) || DEFAULT_FIXED_VIDEO_PROMPT;
       input.classList.toggle("is-lines", isLines);
       input.placeholder = isLines
-        ? "Mỗi dòng một prompt, ví dụ:\nTách cà phê bốc khói trên bàn gỗ\nẤm trà bên cửa sổ lúc bình minh"
+        ? "Mỗi dòng một prompt, ví dụ:\nTách cà phê bốc khói trên bàn gỗ\nam-tra-01 | Ấm trà bên cửa sổ lúc bình minh  (đặt tên file)"
         : "Nhập prompt dùng chung cho mọi luồng…";
     }
     if ($("#promptStreamCountWrap")) $("#promptStreamCountWrap").hidden = isLines;
@@ -231,21 +234,21 @@
   }
 
   function addRowsFromPromptLines() {
-    const prompts = window.MusePromptLines.splitPromptLines($("#bulkVideoPromptsInput")?.value);
-    if (!prompts.length) {
+    const lines = window.MusePromptLines.splitNamedPromptLines($("#bulkVideoPromptsInput")?.value);
+    if (!lines.length) {
       showToast("Nhập ít nhất một prompt, mỗi dòng một prompt.", true);
       $("#bulkVideoPromptsInput")?.focus();
       return 0;
     }
     const repeat = promptRepeat();
-    for (const prompt of prompts) {
-      for (let i = 0; i < repeat; i += 1) state.batchRows.push(newBatchRow(prompt));
+    for (const { name, prompt } of lines) {
+      for (let i = 0; i < repeat; i += 1) state.batchRows.push({ ...newBatchRow(prompt), outputName: name });
     }
     renderProductChips();
     saveBatchRows();
     renderBatchTable();
-    showToast(`Đã thêm ${prompts.length * repeat} luồng vào bảng (${prompts.length} prompt).`);
-    return prompts.length * repeat;
+    showToast(`Đã thêm ${lines.length * repeat} luồng vào bảng (${lines.length} prompt).`);
+    return lines.length * repeat;
   }
 
   const activeClientRowIds = new Set();
@@ -1383,7 +1386,7 @@ curl ${baseUrlV1}/videos \\
 
     const linePrompts =
       state.promptMode === "lines"
-        ? window.MusePromptLines.splitPromptLines($("#bulkVideoPromptsInput")?.value)
+        ? window.MusePromptLines.splitNamedPromptLines($("#bulkVideoPromptsInput")?.value)
         : [];
 
     // Finished rows keep the prompt and settings their video was made with.
@@ -1395,7 +1398,10 @@ curl ${baseUrlV1}/videos \\
     }
     editable.forEach((r, idx) => {
       if (state.promptMode === "lines" && linePrompts.length > 0) {
-        r.prompt = linePrompts[idx % linePrompts.length];
+        const line = linePrompts[idx % linePrompts.length];
+        // The line is the whole spec: a line without a name clears the old one, which would no longer fit.
+        r.prompt = line.prompt;
+        r.outputName = line.name;
       } else if (fixedVidPrompt.trim()) {
         r.prompt = fixedVidPrompt.trim();
       }
