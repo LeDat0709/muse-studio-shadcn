@@ -2,11 +2,42 @@
   "name": "muse-ai-studio-shadcn",
   "version": "2.0.0",
   "description": "Muse AI Studio — Node.js CDP Automation, Multi-Account Pool, Batch Video/Image Studio & OpenAI API Gateway (shadcn/ui)",
+  "author": "LeDat0709",
   "main": "desktop/main.js",
   "scripts": {
     "start": "node src/cli.js",
     "dev": "node src/cli.js",
     "test": "node --test tests/*.test.js",
-    "pack:mac": "python3 scripts/pack-app.py"
+    "pack:mac": "python3 scripts/pack-app.py",
+    "dist:win": "electron-builder --win portable --x64 --publish never"
+  },
+  "devDependencies": {
+    "electron": "43.4.0",
+    "electron-builder": "26.17.0"
+  },
+  "build": {
+    "productName": "Muse AI Studio",
+    "files": [
+      "desktop/**/*",
+      "src/**/*",
+      "extension/**/*",
+      "package.json",
+      "!desktop/.hallmark${/*}"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "icon": "desktop/assets/icon.ico",
+      "target": [
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "portable": {
+      "artifactName": "Muse-AI-Studio-${version}-portable.exe"
+    }
   }
 }
