@@ -454,6 +454,7 @@ class MuseEngine {
     this._openTabChain = Promise.resolve();
     this._accountSendChains = new Map();
     this.activeCount = 0;
+    this.activeRunners = new Map();
     this.busyTabIds = new Set();
     this.usedGridSlots = new Map();
     this._autoCloseChromeTimer = null;
@@ -2752,6 +2753,25 @@ foreach ($p in $procs) {
 
     this.activeCount += 1;
     const gw = new MuseGateway(account, { store: this.store });
+    const runner = {
+      taskId: task.id,
+      rowId: rowId || "",
+      accountId: account.id,
+      accountName: account.name,
+      gw,
+      sessionId: "",
+      cancelled: false,
+      cancelReason: "",
+    };
+    this.activeRunners.set(task.id, runner);
+
+    const checkCancelled = () => {
+      if (runner.cancelled) {
+        const cancelErr = new Error(runner.cancelReason || "Đã dừng bởi người dùng");
+        cancelErr.cancelled = true;
+        throw cancelErr;
+      }
+    };
 
     const isMatchingMediaKey = (str) => {
       const s = String(str || "").toLowerCase();
@@ -2762,6 +2782,7 @@ foreach ($p in $procs) {
     };
 
     try {
+      checkCancelled();
       reportProgress(10, "Đang xác thực HTTP & kết nối cổng Noise-XX Gateway (Không dùng CDP)...");
       this.log(
         `[${account.name}] [HTTP + Noise-XX Gateway] Bắt đầu tạo ${expect.toUpperCase()} (${aspectRatio}, ${
@@ -2770,6 +2791,7 @@ foreach ($p in $procs) {
       );
 
       await gw.connect(25000);
+      checkCancelled();
       reportProgress(20, `Đã kết nối máy chủ Muse VM (${gw.vmId}) qua giao thức Noise-XX!`);
 
       if (expect === "video") {
@@ -2777,6 +2799,8 @@ foreach ($p in $procs) {
       }
 
       const sessionId = await gw.startSession(cleanPrompt.slice(0, 48));
+      runner.sessionId = sessionId || "";
+      checkCancelled();
 
       // Upload reference images directly to the VM workspace via fs.write
       const uploadedPaths = [];
@@ -2805,12 +2829,17 @@ foreach ($p in $procs) {
       // Snapshot baseline history & files on the VM so only newly created media is picked up
       const baselineMsgIds = new Set();
       const baselineMediaKeys = new Set();
+      const ownedTurnIds = new Set();
       const taskSendStartMs = Date.now();
+      let minTaskOccurredAtMs = taskSendStartMs - 1000;
 
       const initHist = await gw.getHistory({ sessionId, limit: 30 }).catch(() => []);
       for (const ev of initHist) {
         if (ev?.message_id) baselineMsgIds.add(ev.message_id);
         const info = inspectHistoryEvent(ev);
+        if (info.occurredAtMs > minTaskOccurredAtMs) {
+          minTaskOccurredAtMs = info.occurredAtMs;
+        }
         for (const r of info.mediaRefs) {
           baselineMediaKeys.add(`${r.url || ""}|${r.path || ""}|${r.id || ""}`);
         }
@@ -2821,16 +2850,31 @@ foreach ($p in $procs) {
         baselineMediaKeys.add(`${f.url || ""}|${f.path || ""}|${f.id || ""}`);
       }
 
+      const sendTrackedMessage = async (msgText) => {
+        const res = await gw.sendChatMessage(msgText, { sessionId });
+        if (res?.clientMessageId) ownedTurnIds.add(String(res.clientMessageId));
+        if (res?.submissionId) ownedTurnIds.add(String(res.submissionId));
+        for (const ev of res?.events || []) {
+          const mid = ev?.message_id || ev?.payload?.message_id || ev?.id || "";
+          const rto = ev?.reply_to_message_id || ev?.payload?.reply_to_message_id || "";
+          if (mid) ownedTurnIds.add(String(mid));
+          if (rto) ownedTurnIds.add(String(rto));
+        }
+        return res;
+      };
+
+      checkCancelled();
       reportProgress(
         35,
         isLongVideo
           ? `Đang gửi lệnh tạo & ghép Video ${targetDurationSec}s qua cổng Gateway...`
           : `Đang gửi lệnh tạo ${expect === "video" ? "Video" : "Ảnh"} trực tiếp qua cổng Gateway...`
       );
-      await gw.sendChatMessage(finalPrompt, { sessionId });
+      await sendTrackedMessage(finalPrompt);
+      checkCancelled();
 
       this.log(
-        `[${account.name}] [Gateway VM ${gw.vmId} · Session ${sessionId.slice(0, 8)}] Đã gửi lệnh trực tiếp qua WebSocket Noise-XX${
+        `[${account.name}] [Gateway VM ${gw.vmId} · Session ${(sessionId || "default").slice(0, 8)} · Tag ${taskTag}] Đã gửi lệnh trực tiếp qua WebSocket Noise-XX${
           isLongVideo ? ` (Yêu cầu tạo & xuất video ${targetDurationSec}s)` : ""
         }, đang chờ render...`
       );
@@ -2855,17 +2899,41 @@ foreach ($p in $procs) {
       let lastSeenAssistantText = "";
 
       while (Date.now() < deadline) {
+        checkCancelled();
         await new Promise((r) => setTimeout(r, 2200));
+        checkCancelled();
         const elapsedSec = Math.round((Date.now() - tStart) / 1000);
         const progPct = Math.min(92, Math.round(36 + elapsedSec * 0.45));
 
         const events = await gw.getHistory({ sessionId, limit: 40 }).catch(() => []);
+        checkCancelled();
         const newMediaCandidates = [];
         const assistantReplies = [];
 
         for (const ev of events) {
           if (ev?.message_id && baselineMsgIds.has(ev.message_id)) continue;
           const info = inspectHistoryEvent(ev);
+          if (info.occurredAtMs > 0 && info.occurredAtMs < minTaskOccurredAtMs) continue;
+          if (sessionId && info.sessionId && info.sessionId !== sessionId) continue;
+
+          if (info.eventName === "message.user" || ev?.role === "user") {
+            if (info.clientMessageId && ownedTurnIds.has(info.clientMessageId) && info.messageId) {
+              ownedTurnIds.add(String(info.messageId));
+            }
+            continue;
+          }
+
+          // When multiple jobs run concurrently on the same VM without distinct sessionIds,
+          // ignore events explicitly replying to a different job's turn.
+          if (
+            this.activeCount > 1 &&
+            !sessionId &&
+            info.replyTo &&
+            ownedTurnIds.size > 0 &&
+            !ownedTurnIds.has(info.replyTo)
+          ) {
+            continue;
+          }
 
           if (info.text) {
             lastSeenAssistantText = info.text;
@@ -2895,6 +2963,12 @@ foreach ($p in $procs) {
           for (const ref of info.mediaRefs) {
             const key = `${ref.url || ""}|${ref.path || ""}|${ref.id || ""}`;
             if (baselineMediaKeys.has(key)) continue;
+            const refPathLower = String(ref.path || ref.url || "").toLowerCase();
+            // Reject final_...mp4 belonging to a different taskTag!
+            const otherFinalMatch = refPathLower.match(/final_([a-z0-9]{4,12})_\d+s\.mp4/i);
+            if (otherFinalMatch && otherFinalMatch[1].toLowerCase() !== taskTag.toLowerCase()) {
+              continue;
+            }
             if (isMatchingMediaKey(ref.url || ref.path)) {
               if (!newMediaCandidates.some((c) => c.key === key)) {
                 newMediaCandidates.push({ ...ref, key, fromPresentation: true });
@@ -2914,6 +2988,10 @@ foreach ($p in $procs) {
             if (baselineMediaKeys.has(key) && !isFreshlyModified) continue;
             const fname = String(f.name || f.path || "").toLowerCase();
             if (expect === "video") {
+              const otherFinalMatch = fname.match(/final_([a-z0-9]{4,12})_\d+s\.mp4/i);
+              if (otherFinalMatch && otherFinalMatch[1].toLowerCase() !== taskTag.toLowerCase()) {
+                continue;
+              }
               if (/(?:^|\/)(?:clip|seg|part|temp|tmp)\d*[_-]/i.test(fname) && stitchCmdCount < 3) {
                 continue;
               }
@@ -2939,7 +3017,10 @@ foreach ($p in $procs) {
         // ==================== FAST PATH: IMAGE OR SHORT VIDEO (<= 10s) ====================
         if (!isLongVideo) {
           if (newMediaCandidates.length > 0) {
-            matchedMedia = newMediaCandidates[newMediaCandidates.length - 1];
+            const exactShort = newMediaCandidates.find((c) =>
+              String(c.path || c.url || "").toLowerCase().includes(taskTag.toLowerCase())
+            );
+            matchedMedia = exactShort || newMediaCandidates[newMediaCandidates.length - 1];
             break;
           }
 
@@ -2953,12 +3034,12 @@ foreach ($p in $procs) {
               expect === "video"
                 ? `Đồng ý với phiên bản an toàn của bạn! Hãy gọi ngay công cụ tạo video AI thật (media.generate_video, tuyệt đối KHÔNG dùng generate_image ảnh tĩnh) để tạo và xuất file video MP4 (${targetDurationSec}s, tỉ lệ ${
                     aspectRatio || "9:16"
-                  }) ra khung chat ngay lập tức, không hỏi lại!`
+                  }) tại /workspace/imagine_media/${targetVmVideoName} và hiển thị ra khung chat ngay lập tức, không hỏi lại!`
                 : `Đồng ý với phiên bản an toàn của bạn! Hãy gọi công cụ generate_image tạo và hiển thị ngay bức ảnh theo yêu cầu ra khung chat, không hỏi lại!`;
             this.log(
               `[${account.name}] [Gateway] ⚡ Đang gửi lệnh thúc đẩy xuất file ${expect.toUpperCase()} (Lần ${storyboardCmdCount})...`
             );
-            await gw.sendChatMessage(fallbackNudge, { sessionId });
+            await sendTrackedMessage(fallbackNudge);
             continue;
           }
 
@@ -2976,9 +3057,16 @@ foreach ($p in $procs) {
         const stitchedCandidate = newMediaCandidates.find((c) => {
           const p = String(c.path || c.url || "").toLowerCase();
           if (/(?:^|\/)(?:clip|seg|part|temp|tmp)\d*[_-]/i.test(p)) return false;
+          const otherFinal = p.match(/final_([a-z0-9]{4,12})_\d+s\.mp4/i);
+          if (otherFinal && otherFinal[1].toLowerCase() !== taskTag.toLowerCase()) return false;
+          if (p.includes(targetVmVideoName.toLowerCase()) || p.includes(`final_${taskTag.toLowerCase()}`)) {
+            return true;
+          }
+          if (this.activeCount > 1 && !p.includes(taskTag.toLowerCase())) {
+            return false;
+          }
           return (
-            p.includes(targetVmVideoName.toLowerCase()) ||
-            /final_stitched|final_video|final_[a-z0-9]+|stitched|merged|combined|complete/i.test(p) ||
+            /final_stitched|final_video|stitched|merged|combined|complete/i.test(p) ||
             new RegExp(`_${targetDurationSec}s\\.mp4$`, "i").test(p)
           );
         });
@@ -3009,7 +3097,15 @@ foreach ($p in $procs) {
         const hasUnhandledTurn =
           latestReply && latestReply.messageId && !handledAssistantTurnIds.has(latestReply.messageId);
 
-        if (clipCnt === 1 && hasUnhandledTurn && newMediaCandidates[0].fromPresentation) {
+        if (
+          clipCnt === 1 &&
+          hasUnhandledTurn &&
+          newMediaCandidates[0].fromPresentation &&
+          (this.activeCount <= 1 ||
+            String(newMediaCandidates[0].path || newMediaCandidates[0].url || "")
+              .toLowerCase()
+              .includes(taskTag.toLowerCase()))
+        ) {
           matchedMedia = newMediaCandidates[0];
           this.log(
             `[${account.name}] [Gateway] ✅ Muse VM đã trình bày file Video hoàn chỉnh trên khung chat: ${
@@ -3051,7 +3147,7 @@ foreach ($p in $procs) {
           this.log(
             `[${account.name}] [Gateway] 🎬 Đang gửi lệnh bắt buộc render & ghép video ${targetDurationSec}s (Lần ${storyboardCmdCount})...`
           );
-          await gw.sendChatMessage(followUpCmd, { sessionId });
+          await sendTrackedMessage(followUpCmd);
           continue;
         }
 
@@ -3071,7 +3167,7 @@ foreach ($p in $procs) {
           this.log(
             `[${account.name}] [Gateway] 🎬 Đang gửi lệnh ghép nối ${clipCnt} clip thành 1 video ${targetDurationSec}s hoàn chỉnh (Lần ${stitchCmdCount})...`
           );
-          await gw.sendChatMessage(followUpCmd, { sessionId });
+          await sendTrackedMessage(followUpCmd);
           continue;
         }
 
@@ -3082,11 +3178,13 @@ foreach ($p in $procs) {
       }
 
       if (!matchedMedia) {
+        checkCancelled();
         throw new Error(
           `Quá thời gian chờ (${timeoutSec}s) nhưng Muse VM chưa trả về file ${expect} mới.`
         );
       }
 
+      checkCancelled();
       const preferredMediaTitle = productRefImg
         ? this._normalizeProductVideoTitle(extractedProductTitle, fallbackProductFileBase)
         : "";
@@ -3108,6 +3206,7 @@ foreach ($p in $procs) {
             `Muse VM vẫn đang ghi file video (${Math.round(bytes / 1024)} KB), chờ ghi xong rồi tải lại...`
           ),
       });
+      checkCancelled();
       const prefix = expect === "video" ? "vid" : "img";
       const base =
         preferredMediaTitle || `${prefix}_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
@@ -3157,6 +3256,14 @@ foreach ($p in $procs) {
         };
       }
     } catch (err) {
+      if (err.cancelled || runner.cancelled) {
+        const reason = runner.cancelReason || err.message || "Đã dừng bởi người dùng";
+        this.log(`[${account.name}] ⏹️ Đã dừng tạo ${expect}: ${reason}`);
+        this.store.finishTask(task.id, null, reason);
+        const cancelErr = new Error(reason);
+        cancelErr.cancelled = true;
+        throw cancelErr;
+      }
       this.log(`[${account.name}] ❌ Lỗi tạo ${expect} (Gateway): ${err.message}`, "error");
       if (err.fatalDie) {
         this.store.markDie(account.id, err.message);
@@ -3166,9 +3273,68 @@ foreach ($p in $procs) {
       this.store.finishTask(task.id, null, err.message);
       throw err;
     } finally {
+      this.activeRunners.delete(task.id);
       this.activeCount = Math.max(0, this.activeCount - 1);
       gw.close();
     }
+  }
+
+  /**
+   * Cancel active media generation tasks by rowIds, taskIds, or all.
+   */
+  async cancelTasks({ rowIds = [], taskIds = [], all = false, reason = "Đã dừng bởi người dùng" } = {}) {
+    const rowSet = new Set((rowIds || []).map((x) => String(x || "").trim()).filter(Boolean));
+    const taskSet = new Set((taskIds || []).map((x) => String(x || "").trim()).filter(Boolean));
+    const cancelledTaskIds = [];
+    const cancelledRowIds = [];
+
+    for (const [tId, runner] of this.activeRunners.entries()) {
+      const match =
+        all ||
+        taskSet.has(tId) ||
+        (runner.rowId && rowSet.has(runner.rowId));
+      if (!match) continue;
+      runner.cancelled = true;
+      runner.cancelReason = reason;
+      cancelledTaskIds.push(tId);
+      if (runner.rowId) cancelledRowIds.push(runner.rowId);
+      try {
+        if (runner.gw) {
+          runner.gw.cancelChat({ sessionId: runner.sessionId }).catch(() => {});
+          setTimeout(() => {
+            try {
+              runner.gw.close();
+            } catch (_e) {}
+          }, 150);
+        }
+      } catch (_e) {
+        // ignore
+      }
+      this.store.finishTask(tId, null, reason);
+    }
+
+    // Also clean up any store running tasks that didn't have a live runner entry
+    for (const t of this.store.listActiveTasks() || []) {
+      const match =
+        all ||
+        taskSet.has(t.id) ||
+        (t.row_id && rowSet.has(t.row_id));
+      if (match && !cancelledTaskIds.includes(t.id)) {
+        cancelledTaskIds.push(t.id);
+        if (t.row_id) cancelledRowIds.push(t.row_id);
+        this.store.finishTask(t.id, null, reason);
+      }
+    }
+
+    if (all && this.activeRunners.size === 0) {
+      this.activeCount = 0;
+    }
+
+    return {
+      cancelledCount: cancelledTaskIds.length,
+      cancelledTaskIds,
+      cancelledRowIds,
+    };
   }
 
   async generateImage(opts) {

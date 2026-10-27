@@ -2,3 +2,6 @@ Muse AI Studio.app/
 data/
 node_modules/
 .DS_Store
+.hallmark/
+desktop/.hallmark/
+

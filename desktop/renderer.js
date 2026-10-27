@@ -5,6 +5,10 @@
     status: null,
     accounts: [],
     batchRows: [],
+    promptMode: "single",
+    previewRowId: "",
+    queueFilter: { q: "", status: "all" },
+    queueView: ["grid", "table"].includes(localStorage.getItem("muse_queue_view")) ? localStorage.getItem("muse_queue_view") : "list",
     media: [],
     tasks: [],
     logs: [],
@@ -29,28 +33,30 @@
     "Khung hình dọc 9:16. Nhà xưởng công nghiệp rộng, trần cao, mái và tường tôn xám, dầm thép tối màu, sàn bê tông. Chuyển động camera mượt mà quay cận cảnh và xoay quanh sản phẩm trong không gian nhà xưởng công nghiệp sáng rõ, giữ nguyên thiết kế và chi tiết sản phẩm mẫu đính kèm, chất lượng 4K sắc nét.";
 
   const ICON = {
-    sun: `<svg class="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`,
-    moon: `<svg class="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`,
-    eye: `<svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>`,
-    eyeOff: `<svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>`,
-    plus: `<svg class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>`,
-    upload: `<svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>`,
-    clapperboard: `<svg class="lucide" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 4"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>`,
-    userPlus: `<svg class="lucide" width="11.5" height="11.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>`,
-    packagePlus: `<svg class="lucide" width="11.5" height="11.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16h6"/><path d="M19 13v6"/><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"/><path d="m7.5 4.27 9 5.15"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" x2="12" y1="22" y2="12"/></svg>`,
-    image: `<svg class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>`,
-    play: `<svg class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>`,
-    pause: `<svg class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg>`,
-    trash: `<svg class="lucide" width="12.5" height="12.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`,
-    search: `<svg class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>`,
-    download: `<svg class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>`,
-    globe: `<svg class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`,
-    refresh: `<svg class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>`,
-    barChart: `<svg class="lucide" width="12.5" height="12.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/></svg>`,
-    sparkles: `<svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>`,
-    check: `<svg class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`,
-    alert: `<svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>`,
-    spinner: `<svg class="lucide spin-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`,
+    sun: `<svg aria-hidden="true" class="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>`,
+    moon: `<svg aria-hidden="true" class="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>`,
+    eye: `<svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"/><circle cx="12" cy="12" r="3"/></svg>`,
+    eyeOff: `<svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49"/><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242"/><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143"/><path d="m2 2 20 20"/></svg>`,
+    plus: `<svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>`,
+    upload: `<svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>`,
+    clapperboard: `<svg aria-hidden="true" class="lucide" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 4"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>`,
+    userPlus: `<svg aria-hidden="true" class="lucide" width="11.5" height="11.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>`,
+    packagePlus: `<svg aria-hidden="true" class="lucide" width="11.5" height="11.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16h6"/><path d="M19 13v6"/><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"/><path d="m7.5 4.27 9 5.15"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" x2="12" y1="22" y2="12"/></svg>`,
+    image: `<svg aria-hidden="true" class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>`,
+    play: `<svg aria-hidden="true" class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>`,
+    pause: `<svg aria-hidden="true" class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="14" y="4" width="4" height="16" rx="1"/><rect x="6" y="4" width="4" height="16" rx="1"/></svg>`,
+    trash: `<svg aria-hidden="true" class="lucide" width="12.5" height="12.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>`,
+    search: `<svg aria-hidden="true" class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>`,
+    download: `<svg aria-hidden="true" class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>`,
+    globe: `<svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>`,
+    refresh: `<svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>`,
+    barChart: `<svg aria-hidden="true" class="lucide" width="12.5" height="12.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" x2="12" y1="20" y2="10"/><line x1="18" x2="18" y1="20" y2="4"/><line x1="6" x2="6" y1="20" y2="16"/></svg>`,
+    sparkles: `<svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>`,
+    check: `<svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>`,
+    alert: `<svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>`,
+    spinner: `<svg aria-hidden="true" class="lucide spin-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 1 1-6.219-8.56"/></svg>`,
+    stop: `<svg aria-hidden="true" class="lucide" width="11.5" height="11.5" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>`,
+    edit: `<svg aria-hidden="true" class="lucide" width="11.5" height="11.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>`,
   };
 
   function $(sel) {
@@ -64,7 +70,7 @@
   function showToast(msg, isError = false) {
     const container = $("#toastContainer");
     if (!container) return;
-    const cleanMsg = String(msg || "").replace(/^[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}\uFE0F\s]+/u, "").trim();
+    const cleanMsg = String(msg || "").replace(/^[\u{1F300}-\u{1FAFF}\u{2300}-\u{23FF}\u{2600}-\u{27BF}\uFE0F\s]+/u, "").trim();
     const el = document.createElement("div");
     el.className = `toast${isError ? " error" : ""}`;
     el.innerHTML = `${isError ? ICON.alert : ICON.check}<span>${escapeHtml(cleanMsg || msg)}</span>`;
@@ -114,21 +120,131 @@
     return `${Math.floor(diff / 86400)} ngày trước`;
   }
 
+  const PROMPT_SINGLE_KEY = "embong_fixed_video_prompt";
+  const PROMPT_LINES_KEY = "muse_prompt_lines";
+  const PROMPT_MODE_KEY = "muse_prompt_mode";
+
   function getFixedVideoPrompt() {
     const el = $("#bulkVideoPromptsInput");
-    return String(el ? el.value : localStorage.getItem("embong_fixed_video_prompt") || "").trim();
+    if (state.promptMode === "lines") {
+      // Rows made outside the list (a product, "Thêm 1 luồng") take the list's first prompt.
+      const lines = window.MusePromptLines.splitPromptLines(el ? el.value : "");
+      return lines[0] || String(localStorage.getItem(PROMPT_SINGLE_KEY) || "").trim();
+    }
+    return String(el ? el.value : localStorage.getItem(PROMPT_SINGLE_KEY) || "").trim();
+  }
+
+  function promptRepeat() {
+    return Math.max(1, Math.min(10, Number($("#promptRepeatInput")?.value) || 1));
+  }
+
+  function updatePromptHint() {
+    const hint = $("#promptHint");
+    const label = $("#btnCreateStreamsLabel");
+    if (state.promptMode !== "lines") {
+      if (hint) hint.textContent = "Áp dụng cho mọi luồng chưa chạy, tự lưu khi gõ.";
+      if (label) label.textContent = "Chỉ thêm vào hàng đợi";
+      return;
+    }
+    const count = window.MusePromptLines.splitPromptLines($("#bulkVideoPromptsInput")?.value).length;
+    const repeat = promptRepeat();
+    const total = count * repeat;
+    if (hint) {
+      hint.textContent =
+        count === 0
+          ? "Chưa có prompt nào. Mỗi dòng sẽ thành một luồng."
+          : repeat > 1
+          ? `${count} prompt, lặp ${repeat} lần: ${total} luồng`
+          : `${count} prompt: ${count} luồng`;
+    }
+    if (label) label.textContent = total > 0 ? `Thêm ${total} luồng vào hàng đợi` : "Thêm vào hàng đợi";
+  }
+
+  // Each mode keeps its own text: one shared prompt, or a list with one prompt per line.
+  function applyPromptMode() {
+    const isLines = state.promptMode === "lines";
+    const input = $("#bulkVideoPromptsInput");
+    if ($("#promptModeLines")) $("#promptModeLines").checked = isLines;
+    if ($("#promptModeSingle")) $("#promptModeSingle").checked = !isLines;
+    if (input) {
+      input.value = isLines
+        ? localStorage.getItem(PROMPT_LINES_KEY) || ""
+        : localStorage.getItem(PROMPT_SINGLE_KEY) || DEFAULT_FIXED_VIDEO_PROMPT;
+      input.classList.toggle("is-lines", isLines);
+      input.placeholder = isLines
+        ? "Mỗi dòng một prompt, ví dụ:\nTách cà phê bốc khói trên bàn gỗ\nẤm trà bên cửa sổ lúc bình minh"
+        : "Nhập prompt dùng chung cho mọi luồng…";
+    }
+    if ($("#promptStreamCountWrap")) $("#promptStreamCountWrap").hidden = isLines;
+    if ($("#promptRepeatWrap")) $("#promptRepeatWrap").hidden = !isLines;
+    if ($("#btnAddOneStream")) $("#btnAddOneStream").hidden = isLines;
+    updatePromptHint();
+  }
+
+  // AI scripts arrive as a list: the list mode keeps one prompt per line, the single mode joins them.
+  function loadPromptsIntoInput(lines) {
+    const isLines = state.promptMode === "lines";
+    const text = lines.join(isLines ? "\n" : " ");
+    if ($("#bulkVideoPromptsInput")) $("#bulkVideoPromptsInput").value = text;
+    localStorage.setItem(isLines ? PROMPT_LINES_KEY : PROMPT_SINGLE_KEY, text);
+    updatePromptHint();
   }
 
   function initFixedPrompts() {
-    const savedVid = localStorage.getItem("embong_fixed_video_prompt");
-    const vidPrompt = savedVid && savedVid.trim() ? savedVid : DEFAULT_FIXED_VIDEO_PROMPT;
+    const savedVid = localStorage.getItem(PROMPT_SINGLE_KEY);
+    if (!savedVid || !savedVid.trim()) {
+      localStorage.setItem(PROMPT_SINGLE_KEY, DEFAULT_FIXED_VIDEO_PROMPT);
+    }
+    state.promptMode = localStorage.getItem(PROMPT_MODE_KEY) === "lines" ? "lines" : "single";
+    applyPromptMode();
+  }
 
-    if ($("#bulkVideoPromptsInput")) {
-      $("#bulkVideoPromptsInput").value = vidPrompt;
+  // One table row built from the current bulk settings (mode, ratio, duration, quality, account, character).
+  function newBatchRow(prompt) {
+    const bulkMode = $("#bulkModeSelect")?.value || "video";
+    const streamIndex = state.batchRows.length + 1;
+    const rowId = uid();
+    const charImg = state.bulkCharacterImage;
+    return {
+      id: rowId,
+      selected: true,
+      mode: bulkMode,
+      stepOrder: bulkMode === "image" ? 1 : 2,
+      streamIndex,
+      streamId: `stream_${bulkMode}_${streamIndex}_${rowId}`,
+      streamLabel: `Luồng ${bulkMode === "image" ? "Ảnh" : "Video"} #${streamIndex}`,
+      prompt,
+      aspectRatio: $("#bulkAspectSelect")?.value || "9:16",
+      duration: $("#bulkDurationSelect")?.value || "20s",
+      quality: $("#bulkQualitySelect")?.value || "4K",
+      characterImage: charImg ? { ...charImg } : null,
+      productImage: null,
+      referenceImage: null,
+      accountId: $("#bulkAccountSelect")?.value || "",
+      accountName: "",
+      status: "idle",
+      error: "",
+      mediaUrl: "",
+      filename: "",
+    };
+  }
+
+  function addRowsFromPromptLines() {
+    const prompts = window.MusePromptLines.splitPromptLines($("#bulkVideoPromptsInput")?.value);
+    if (!prompts.length) {
+      showToast("Nhập ít nhất một prompt, mỗi dòng một prompt.", true);
+      $("#bulkVideoPromptsInput")?.focus();
+      return 0;
     }
-    if (!savedVid) {
-      localStorage.setItem("embong_fixed_video_prompt", vidPrompt);
+    const repeat = promptRepeat();
+    for (const prompt of prompts) {
+      for (let i = 0; i < repeat; i += 1) state.batchRows.push(newBatchRow(prompt));
     }
+    renderProductChips();
+    saveBatchRows();
+    renderBatchTable();
+    showToast(`Đã thêm ${prompts.length * repeat} luồng vào bảng (${prompts.length} prompt).`);
+    return prompts.length * repeat;
   }
 
   const activeClientRowIds = new Set();
@@ -235,7 +351,8 @@
         (preserveFinished && r.status === "done");
       if (!isBusyOrDone) {
         r.mode = bulkMode;
-        r.prompt = fixedVidPrompt;
+        // In the list mode every row keeps its own prompt; settings changes must not overwrite it.
+        if (state.promptMode !== "lines") r.prompt = fixedVidPrompt;
         r.aspectRatio = aspectRatio;
         r.duration = duration;
         r.quality = quality;
@@ -250,17 +367,8 @@
     }
 
     const totalStreams = state.batchRows.length;
-    if (totalStreams > 0) {
-      const concSel = $("#bulkConcurrencySelect");
-      if (concSel) {
-        const targetConc = String(Math.min(8, Math.max(1, totalStreams)));
-        if (Array.from(concSel.options).some((o) => o.value === targetConc)) {
-          concSel.value = targetConc;
-        }
-      }
-      if ($("#promptStreamCountInput")) {
-        $("#promptStreamCountInput").value = String(totalStreams);
-      }
+    if (totalStreams > 0 && $("#promptStreamCountInput")) {
+      $("#promptStreamCountInput").value = String(totalStreams);
     }
 
     renderProductChips();
@@ -307,41 +415,10 @@
     const toAdd = needed > 0 ? needed : requestedCount ? Number(requestedCount) : 0;
 
     for (let i = 0; i < toAdd; i += 1) {
-      const streamIndex = state.batchRows.length + 1;
-      const rowId = uid();
-      const streamId = `stream_${bulkMode}_${streamIndex}_${rowId}`;
-      state.batchRows.push({
-        id: rowId,
-        selected: true,
-        mode: bulkMode,
-        stepOrder: bulkMode === "image" ? 1 : 2,
-        streamIndex,
-        streamId,
-        streamLabel: `Luồng ${bulkMode === "image" ? "Ảnh" : "Video"} #${streamIndex}`,
-        prompt: fixedVidPrompt,
-        aspectRatio,
-        duration,
-        quality,
-        characterImage: charImg ? { ...charImg } : null,
-        productImage: null,
-        referenceImage: null,
-        accountId,
-        accountName: "",
-        status: "idle",
-        error: "",
-        mediaUrl: "",
-        filename: "",
-      });
+      state.batchRows.push(newBatchRow(fixedVidPrompt));
     }
 
     const totalStreams = state.batchRows.length;
-    const concSel = $("#bulkConcurrencySelect");
-    if (concSel) {
-      const targetConc = String(Math.min(8, Math.max(1, totalStreams)));
-      if (Array.from(concSel.options).some((o) => o.value === targetConc)) {
-        concSel.value = targetConc;
-      }
-    }
     if ($("#promptStreamCountInput")) {
       $("#promptStreamCountInput").value = String(totalStreams);
     }
@@ -350,52 +427,17 @@
     saveBatchRows();
     renderBatchTable();
     showToast(
-      `🎬 Đã sẵn sàng ${totalStreams} Luồng Video từ Prompt cố định!`
+      `Đã sẵn sàng ${totalStreams} Luồng Video từ Prompt cố định!`
     );
   }
 
-  function addOneStreamFromPrompt() {
+  function addOneStreamFromPrompt({ focusPreview = false } = {}) {
     const fixedVidPrompt = getFixedVideoPrompt() || DEFAULT_FIXED_VIDEO_PROMPT;
-    const bulkMode = $("#bulkModeSelect")?.value || "video";
-    const aspectRatio = $("#bulkAspectSelect")?.value || "9:16";
-    const duration = $("#bulkDurationSelect")?.value || "20s";
-    const quality = $("#bulkQualitySelect")?.value || "4K";
-    const accountId = $("#bulkAccountSelect")?.value || "";
-    const charImg = state.bulkCharacterImage;
     const streamIndex = state.batchRows.length + 1;
-    const rowId = uid();
-    const streamId = `stream_${bulkMode}_${streamIndex}_${rowId}`;
+    const createdRow = newBatchRow(fixedVidPrompt);
+    state.batchRows.push(createdRow);
+    state.previewRowId = createdRow.id;
 
-    state.batchRows.push({
-      id: rowId,
-      selected: true,
-      mode: bulkMode,
-      stepOrder: bulkMode === "image" ? 1 : 2,
-      streamIndex,
-      streamId,
-      streamLabel: `Luồng ${bulkMode === "image" ? "Ảnh" : "Video"} #${streamIndex}`,
-      prompt: fixedVidPrompt,
-      aspectRatio,
-      duration,
-      quality,
-      characterImage: charImg ? { ...charImg } : null,
-      productImage: null,
-      referenceImage: null,
-      accountId,
-      accountName: "",
-      status: "idle",
-      error: "",
-      mediaUrl: "",
-      filename: "",
-    });
-
-    const concSel = $("#bulkConcurrencySelect");
-    if (concSel) {
-      const targetConc = String(Math.min(8, Math.max(1, state.batchRows.length)));
-      if (Array.from(concSel.options).some((o) => o.value === targetConc)) {
-        concSel.value = targetConc;
-      }
-    }
     if ($("#promptStreamCountInput")) {
       $("#promptStreamCountInput").value = String(state.batchRows.length);
     }
@@ -403,7 +445,14 @@
     renderProductChips();
     saveBatchRows();
     renderBatchTable();
-    showToast(`➕ Đã thêm Luồng Video #${streamIndex} vào bảng!`);
+    if (focusPreview) {
+      const promptEl = $("#previewPrompt");
+      if (promptEl) {
+        promptEl.focus();
+        promptEl.select();
+      }
+    }
+    showToast(`Đã thêm Luồng #${streamIndex} vào hàng đợi!`);
   }
 
   function sortBatchRowsByStream() {
@@ -510,7 +559,7 @@
 
     return {
       pct,
-      shortText: `⏳ ${pct}% · ${shortLabel}${elapsedPart}`,
+      shortText: `${pct}%, ${shortLabel}${elapsedPart}`,
       fullTitle: `${pct}% — ${rawTxt}`,
     };
   }
@@ -588,15 +637,16 @@
               (r) =>
                 r.status === "running" &&
                 !usedRowIds.has(r.id) &&
+                !r.jobId &&
                 r.prompt &&
                 rt.prompt &&
-                rt.prompt.includes(r.prompt.trim().slice(0, 25))
+                rt.prompt.trim() === r.prompt.trim()
             );
           }
-          if (matchingRow) {
+          if (matchingRow && matchingRow.status === "running" && !matchingRow.cancelledByUser) {
             usedRowIds.add(matchingRow.id);
             matchingRow.progressPct = rt.progress || 15;
-            matchingRow.progressText = rt.progress_text || "Đang xử lý trên Chrome...";
+            matchingRow.progressText = rt.progress_text || "Đang xử lý trên cổng Gateway...";
             changed = true;
           }
         }
@@ -810,7 +860,7 @@ curl ${baseUrlV1}/videos \\
               ${statusBadge}
               ${errLine}
             </td>
-            <td>${acc.cookie_count} cookies ${acc.has_session ? "✓" : "Thiếu hatch_sess"}</td>
+            <td>${acc.cookie_count} cookies ${acc.has_session ? "đủ hatch_sess" : "Thiếu hatch_sess"}</td>
             <td>${expHtml}</td>
             <td><span class="badge badge-idle">${escapeHtml(quotaPct)}</span></td>
             <td>${acc.use_count || 0} lượt / ${acc.fail_count || 0} lỗi</td>
@@ -932,193 +982,460 @@ curl ${baseUrlV1}/videos \\
     if ($("#navBadgeBatch")) $("#navBadgeBatch").textContent = String(total);
   }
 
+  function rowStatusBadge(row) {
+    if (row.status === "running") {
+      const { pct, shortText, fullTitle } = buildCompactRunningBadgeParts(row);
+      return `
+        <div class="compact-status-wrap" data-row-status-id="${row.id}" title="${escapeHtml(fullTitle)}">
+          <span class="badge badge-running">${ICON.spinner}<span>${escapeHtml(shortText)}</span></span>
+          <div class="mini-progress-track"><div class="mini-progress-fill" style="width:${pct}%"></div></div>
+        </div>`;
+    }
+    if (row.status === "done") return `<span class="badge badge-ok">${ICON.check}<span>Hoàn tất</span></span>`;
+    if (row.status === "error") {
+      return `<span class="badge badge-fail" title="${escapeHtml(row.error)}">${ICON.alert}<span>Lỗi</span></span>`;
+    }
+    return `<span class="badge badge-idle">Chờ chạy</span>`;
+  }
+
+  // Character, product and first-frame slots of one row; the actions are the row handlers' own.
+  function rowRefSlots(row) {
+    const slot = (img, upload, clear, preview, icon, label, title) =>
+      img && img.dataUrl
+        ? `<span class="ref-slot-filled">
+             <img src="${img.dataUrl}" alt="${escapeHtml(title)}" class="ref-thumb" data-row-action="${preview}" data-id="${row.id}" />
+             <button class="btn btn-danger btn-sm" data-row-action="${clear}" data-id="${row.id}" title="Bỏ ${escapeHtml(title)}">×</button>
+           </span>`
+        : `<button class="btn btn-soft btn-sm" data-row-action="${upload}" data-id="${row.id}" title="Thêm ${escapeHtml(title)}">${icon}<span>${label}</span></button>`;
+    return `<div class="ref-box">
+      ${slot(row.characterImage, "upload-character", "clear-character", "preview-character", ICON.userPlus, "NV", "ảnh nhân vật")}
+      ${slot(row.productImage, "upload-product", "clear-product", "preview-product", ICON.packagePlus, "SP", "ảnh sản phẩm")}
+      ${slot(row.referenceImage, "upload-ref", "clear-ref", "preview-ref", ICON.image, "Khung đầu", "ảnh khung đầu")}
+    </div>`;
+  }
+
+  function rowSettingsSelects(row) {
+    const opts = (values, current, label = (v) => v) =>
+      values.map((v) => `<option value="${v}" ${current === v ? "selected" : ""}>${label(v)}</option>`).join("");
+    return `
+      <div><label class="field-label" for="previewMode">Loại</label>
+        <select id="previewMode" class="select row-mode-select" data-id="${row.id}">
+          ${opts(["video", "image"], row.mode === "image" ? "image" : "video", (v) => (v === "image" ? "Ảnh" : "Video"))}
+        </select></div>
+      <div><label class="field-label" for="previewAspect">Tỉ lệ</label>
+        <select id="previewAspect" class="select row-aspect-select" data-id="${row.id}">${opts(["9:16", "16:9", "1:1", "4:3", "3:4"], row.aspectRatio)}</select></div>
+      <div><label class="field-label" for="previewDuration">Thời lượng</label>
+        <select id="previewDuration" class="select row-duration-select" data-id="${row.id}">${opts(DURATION_OPTIONS, row.duration || "20s")}</select></div>
+      <div><label class="field-label" for="previewQuality">Độ phân giải</label>
+        <select id="previewQuality" class="select row-quality-select" data-id="${row.id}">${opts(QUALITY_OPTIONS, row.quality || "4K")}</select></div>`;
+  }
+
+  function rowMeta(row, idx) {
+    const parts = [`#${idx + 1}`, row.mode === "image" ? "Ảnh" : "Video", row.aspectRatio || "9:16"];
+    if (row.mode !== "image") parts.push(row.duration || "20s");
+    parts.push(row.quality || "4K", row.accountName || "tài khoản tự động");
+    return parts.join(", ");
+  }
+
+  function isVideoRow(row) {
+    const url = String(row.mediaUrl || "").toLowerCase();
+    return row.mode === "video" || url.endsWith(".mp4") || url.endsWith(".webm");
+  }
+
+  // The list shows one line of a prompt (about 40 characters fit the 1440px column); the preview holds the whole text.
+  const QUEUE_PROMPT_CHARS = 40;
+  function shortPrompt(text) {
+    const s = String(text || "").trim();
+    return s.length > QUEUE_PROMPT_CHARS ? `${s.slice(0, QUEUE_PROMPT_CHARS - 1).trimEnd()}…` : s;
+  }
+
+  function visibleRows() {
+    const q = state.queueFilter.q.trim().toLowerCase();
+    const status = state.queueFilter.status;
+    return state.batchRows.filter(
+      (r) => (status === "all" || (r.status || "idle") === status) && (!q || String(r.prompt || "").toLowerCase().includes(q))
+    );
+  }
+
+  function renderQueuePreview() {
+    const box = $("#queuePreview");
+    if (!box) return;
+    const row = state.batchRows.find((r) => r.id === state.previewRowId) || state.batchRows[0];
+    if (!row) {
+      box.dataset.rowId = "";
+      box.innerHTML = `<div class="preview-media preview-media-empty">Chọn một luồng trong hàng đợi để xem video, prompt và ảnh tham chiếu.</div>`;
+      return;
+    }
+    const idx = state.batchRows.indexOf(row);
+    // Never rebuild under the user's cursor: a status tick would wipe what they are typing, so only refresh status/meta if focused.
+    if (box.dataset.rowId === row.id && box.contains(document.activeElement) && document.activeElement.matches("textarea, input, select")) {
+      const metaEl = box.querySelector(".preview-meta");
+      if (metaEl) {
+        metaEl.innerHTML = `${rowStatusBadge(row)}<span>${escapeHtml(rowMeta(row, idx))}</span>`;
+      }
+      return;
+    }
+    state.previewRowId = row.id;
+    box.dataset.rowId = row.id;
+    const media = row.mediaUrl
+      ? isVideoRow(row)
+        ? `<video src="${escapeHtml(row.mediaUrl)}" class="preview-media" controls playsinline preload="metadata"></video>`
+        : `<img src="${escapeHtml(row.mediaUrl)}" alt="${escapeHtml(row.filename || "Kết quả")}" class="preview-media" />`
+      : `<div class="preview-media preview-media-empty">${
+          row.status === "running" ? "Đang tạo, kết quả sẽ hiện ở đây." : row.status === "error" ? "Luồng này bị lỗi, xem chi tiết bên dưới." : "Chưa chạy. Bấm Chạy để tạo."
+        }</div>`;
+    const runOrStopBtns =
+      row.status === "running"
+        ? `<button class="btn btn-warn btn-sm" data-row-action="stop" data-id="${row.id}" title="Dừng tiến trình tạo video/ảnh của luồng này">${ICON.stop}<span>Dừng luồng này</span></button>
+           <button class="btn btn-primary btn-sm" data-row-action="restart" data-id="${row.id}" title="Dừng tiến trình đang chạy và chạy lại ngay với Prompt vừa sửa">${ICON.refresh}<span>Lưu &amp; Chạy lại</span></button>`
+        : `<button class="btn btn-primary btn-sm" data-row-action="run" data-id="${row.id}">${ICON.play}<span>Chạy luồng này</span></button>`;
+    box.innerHTML = `
+      ${media}
+      <div class="preview-meta">${rowStatusBadge(row)}<span>${escapeHtml(rowMeta(row, idx))}</span></div>
+      ${row.status === "error" && row.error ? `<p class="preview-error">${escapeHtml(row.error)}</p>` : ""}
+      <label class="field-label" for="previewPrompt">Prompt (Có thể sửa trực tiếp ngay cả khi đang chạy)</label>
+      <textarea id="previewPrompt" class="textarea preview-prompt row-prompt-input" data-id="${row.id}" spellcheck="false" placeholder="Nhập prompt cho luồng này…">${escapeHtml(row.prompt)}</textarea>
+      <div class="preview-settings">${rowSettingsSelects(row)}</div>
+      <span class="field-label">Ảnh tham chiếu</span>
+      ${rowRefSlots(row)}
+      <div class="preview-actions">
+        ${runOrStopBtns}
+        ${row.mediaUrl ? `<button class="btn btn-soft btn-sm" data-row-action="preview-media" data-id="${row.id}">${ICON.search}<span>Xem lớn</span></button>
+        <a class="btn btn-sm" href="${escapeHtml(row.mediaUrl)}" download="${escapeHtml(row.filename || "")}">${ICON.download}<span>Tải về</span></a>` : ""}
+        <button class="btn btn-danger btn-sm" data-row-action="delete" data-id="${row.id}" title="Xoá luồng này (tự dừng nếu đang chạy)">${ICON.trash}<span>Xoá</span></button>
+      </div>`;
+  }
+
   function renderBatchTable() {
     updateBatchStats();
-    const tbody = $("#batchTableBody");
-    if (!tbody) return;
+    segSyncers.forEach((sync) => sync());
+    const list = $("#batchTableBody");
+    if (!list) return;
+    const rows = visibleRows();
+    const total = state.batchRows.length;
+    if (!state.batchRows.some((r) => r.id === state.previewRowId)) {
+      state.previewRowId = (rows[0] || state.batchRows[0] || {}).id || "";
+    }
+    const selectedVisCount = rows.filter((r) => r.selected).length;
+    const selectAllEl = $("#selectAllBatch");
+    if (selectAllEl) {
+      selectAllEl.checked = rows.length > 0 && selectedVisCount === rows.length;
+      selectAllEl.indeterminate = selectedVisCount > 0 && selectedVisCount < rows.length;
+    }
+    if ($("#queueCount")) {
+      const baseCount = rows.length === total ? `${total} luồng` : `${rows.length}/${total} luồng`;
+      $("#queueCount").textContent =
+        selectedVisCount > 0 ? `Đã chọn ${selectedVisCount}/${baseCount}` : baseCount;
+    }
 
-    if (!state.batchRows.length) {
-      tbody.innerHTML = `
-        <tr>
-          <td colspan="10" style="padding: 0">
-            <div class="shadcn-empty-state">
-              <div class="shadcn-empty-icon">${ICON.clapperboard}</div>
-              <div class="shadcn-empty-title">Chưa có luồng sản xuất nào trong bảng</div>
-              <div class="shadcn-empty-desc">
-                Bạn có thể khởi tạo luồng ngay từ Prompt cố định hoặc kéo thả trực tiếp các file ảnh sản phẩm từ máy tính vào bảng này.
-              </div>
-              <div class="shadcn-empty-actions">
-                <button type="button" class="btn btn-primary" data-empty-create-from-prompt="1">
-                  ${ICON.plus}
-                  <span>Tạo Luồng từ Prompt cố định</span>
-                </button>
-                <button type="button" class="btn btn-soft" data-empty-upload-products="1">
-                  ${ICON.upload}
-                  <span>Chọn nhiều Ảnh Sản phẩm (Mỗi SP = 1 Luồng)</span>
-                </button>
-              </div>
-            </div>
-          </td>
-        </tr>`;
+    if (!total) {
+      list.innerHTML = `
+        <div class="shadcn-empty-state">
+          <div class="shadcn-empty-icon">${ICON.clapperboard}</div>
+          <div class="shadcn-empty-title">Hàng đợi đang trống</div>
+          <div class="shadcn-empty-desc">Viết prompt ở cột bên trái rồi bấm "Chỉ thêm vào hàng đợi", hoặc kéo thả ảnh sản phẩm vào màn hình này.</div>
+          <div class="shadcn-empty-actions">
+            <button type="button" class="btn btn-primary" data-empty-create-from-prompt="1">${ICON.plus}<span>Thêm từ prompt</span></button>
+            <button type="button" class="btn btn-soft" data-empty-upload-products="1">${ICON.upload}<span>Chọn ảnh sản phẩm</span></button>
+          </div>
+        </div>`;
+      renderQueuePreview();
+      return;
+    }
+    if (!rows.length) {
+      list.innerHTML = `<div class="queue-empty">Không có luồng nào khớp bộ lọc.</div>`;
+      renderQueuePreview();
       return;
     }
 
-    tbody.innerHTML = state.batchRows
-      .map((row, idx) => {
-        const rowDuration = row.duration || "20s";
-        const rowQuality = row.quality || "4K";
-        const streamText =
-          row.streamLabel ||
-          (row.productImage?.name
-            ? `SP (${row.productImage.name.slice(0, 9)})`
-            : `Luồng #${row.streamIndex || idx + 1}`);
-
-        let statusBadge = `<span class="badge badge-idle">Chờ chạy</span>`;
-        if (row.status === "running") {
-          const { pct, shortText, fullTitle } = buildCompactRunningBadgeParts(row);
-          statusBadge = `
-            <div class="compact-status-wrap" data-row-status-id="${row.id}" title="${escapeHtml(fullTitle)}">
-              <span class="badge badge-running">${ICON.spinner}<span>${escapeHtml(shortText)}</span></span>
-              <div class="mini-progress-track">
-                <div class="mini-progress-fill" style="width:${pct}%"></div>
-              </div>
-            </div>`;
-        } else if (row.status === "done") {
-          statusBadge = `<span class="badge badge-ok">${ICON.check}<span>Hoàn tất</span></span>`;
-        } else if (row.status === "error") {
-          statusBadge = `<span class="badge badge-fail" title="${escapeHtml(row.error)}">${ICON.alert}<span>Lỗi</span></span>`;
+    const view = state.queueView;
+    list.className = `queue-list is-${view}`;
+    list.setAttribute("role", view === "table" ? "presentation" : "list");
+    const thumbOf = (row) => {
+      const thumbSrc = row.mediaUrl || row.productImage?.dataUrl || "";
+      return row.mediaUrl && isVideoRow(row)
+        ? `<video src="${escapeHtml(`${row.mediaUrl}${row.mediaUrl.includes("?") ? "&" : "?"}r=2#t=0.5`)}" preload="metadata" muted playsinline aria-hidden="true"></video>`
+        : thumbSrc
+        ? `<img src="${escapeHtml(thumbSrc)}" alt="" />`
+        : row.mode === "image" ? ICON.image : ICON.clapperboard;
+    };
+    const check = (row, idx) =>
+      `<input type="checkbox" class="row-check" data-id="${row.id}" ${row.selected ? "checked" : ""} aria-label="Chọn luồng ${idx + 1}" />`;
+    const active = (row) => (row.id === state.previewRowId ? " is-active" : "");
+    const rowQuickActions = (row) => `
+      <div class="queue-row-actions">
+        ${
+          row.status === "running"
+            ? `<button type="button" class="btn btn-warn btn-sm" data-row-action="stop" data-id="${row.id}" title="Dừng luồng đang chạy">${ICON.stop}<span>Dừng</span></button>`
+            : `<button type="button" class="btn btn-soft btn-sm" data-row-action="run" data-id="${row.id}" title="Chạy luồng này">${ICON.play}</button>`
         }
+        <button type="button" class="btn btn-sm" data-row-action="edit" data-id="${row.id}" title="Sửa prompt luồng này">${ICON.edit}</button>
+        <button type="button" class="btn btn-danger btn-sm" data-row-action="delete" data-id="${row.id}" title="Xoá luồng này">${ICON.trash}</button>
+      </div>`;
 
-        // Character Reference Image Slot (Compact)
-        let charSlotHtml = `
-          <button class="btn btn-soft btn-sm" style="padding:2px 6px; font-size:10.5px; height:24px" data-row-action="upload-character" data-id="${row.id}" title="Thêm ảnh tham chiếu Nhân vật">
-            ${ICON.userPlus}<span>NV</span>
-          </button>`;
-        if (row.characterImage && row.characterImage.dataUrl) {
-          charSlotHtml = `
-            <div style="display:inline-flex; align-items:center; gap:2px; background:var(--accent-soft); padding:1px 3px; border-radius:5px; border:1px solid var(--line-strong)">
-              <img src="${row.characterImage.dataUrl}" class="ref-thumb" data-row-action="preview-character" data-id="${row.id}" title="Ảnh Nhân vật: ${escapeHtml(row.characterImage.name || "NV")}" />
-              <button class="btn btn-danger btn-sm" style="padding:1px 4px; height:20px; font-size:10px" data-row-action="clear-character" data-id="${row.id}" title="Xóa ảnh nhân vật">×</button>
+    if (view === "table") {
+      list.innerHTML = `
+        <table class="data-table queue-table">
+          <thead><tr>
+            <th scope="col"><span class="sr-only">Chọn</span></th><th scope="col">#</th><th scope="col">Prompt</th>
+            <th scope="col">Loại</th><th scope="col">Tỉ lệ</th><th scope="col">Thời lượng</th><th scope="col">Độ phân giải</th>
+            <th scope="col">Tài khoản</th><th scope="col">Trạng thái</th><th scope="col">Thao tác</th>
+          </tr></thead>
+          <tbody>${rows
+            .map((row) => {
+              const idx = state.batchRows.indexOf(row);
+              return `<tr class="${active(row).trim()}" data-row-id="${row.id}">
+                <td>${check(row, idx)}</td>
+                <td>${idx + 1}</td>
+                <td><button type="button" class="queue-open" data-preview-id="${row.id}" title="${escapeHtml(row.prompt || "")}"><span class="queue-prompt">${escapeHtml(shortPrompt(row.prompt) || "Chưa có prompt")}</span></button></td>
+                <td>${row.mode === "image" ? "Ảnh" : "Video"}</td>
+                <td>${escapeHtml(row.aspectRatio || "9:16")}</td>
+                <td>${row.mode === "image" ? "" : escapeHtml(row.duration || "20s")}</td>
+                <td>${escapeHtml(row.quality || "4K")}</td>
+                <td>${escapeHtml(row.accountName || "Tự động")}</td>
+                <td>${rowStatusBadge(row)}</td>
+                <td>${rowQuickActions(row)}</td>
+              </tr>`;
+            })
+            .join("")}</tbody>
+        </table>`;
+      renderQueuePreview();
+      return;
+    }
+
+    if (view === "grid") {
+      list.innerHTML = rows
+        .map((row) => {
+          const idx = state.batchRows.indexOf(row);
+          return `
+            <div class="queue-card${active(row)}" role="listitem" data-row-id="${row.id}">
+              ${check(row, idx)}
+              <button type="button" class="queue-card-open" data-preview-id="${row.id}" title="${escapeHtml(row.prompt || "")}">
+                <span class="queue-card-thumb">${thumbOf(row)}</span>
+                <span class="queue-prompt">${escapeHtml(shortPrompt(row.prompt) || "Chưa có prompt")}</span>
+                <span class="queue-meta">${escapeHtml(rowMeta(row, idx))}</span>
+              </button>
+              <div class="queue-card-status">${rowStatusBadge(row)}${rowQuickActions(row)}</div>
             </div>`;
-        }
+        })
+        .join("");
+      renderQueuePreview();
+      return;
+    }
 
-        // Product Reference Image Slot (Compact)
-        let prodSlotHtml = `
-          <button class="btn btn-soft btn-sm" style="padding:2px 6px; font-size:10.5px; height:24px" data-row-action="upload-product" data-id="${row.id}" title="Thêm ảnh tham chiếu Sản phẩm">
-            ${ICON.packagePlus}<span>SP</span>
-          </button>`;
-        if (row.productImage && row.productImage.dataUrl) {
-          prodSlotHtml = `
-            <div style="display:inline-flex; align-items:center; gap:2px; background:var(--accent-soft); padding:1px 3px; border-radius:5px; border:1px solid var(--line-strong)">
-              <img src="${row.productImage.dataUrl}" class="ref-thumb" data-row-action="preview-product" data-id="${row.id}" title="Ảnh Sản phẩm: ${escapeHtml(row.productImage.name || "SP")}" />
-              <button class="btn btn-danger btn-sm" style="padding:1px 4px; height:20px; font-size:10px" data-row-action="clear-product" data-id="${row.id}" title="Xóa ảnh sản phẩm">×</button>
-            </div>`;
-        }
-
-        // First-Frame / Scene Reference Image Slot (Compact)
-        let refSlotHtml = `
-          <button class="btn btn-sm" style="padding:2px 6px; font-size:10.5px; height:24px" data-row-action="upload-ref" data-id="${row.id}" title="Thêm ảnh khung hình đầu / bối cảnh">
-            ${ICON.image}
-          </button>`;
-        if (row.referenceImage && row.referenceImage.dataUrl) {
-          refSlotHtml = `
-            <div style="display:inline-flex; align-items:center; gap:2px; background:var(--bg-soft); padding:1px 3px; border-radius:5px; border:1px solid var(--line)">
-              <img src="${row.referenceImage.dataUrl}" class="ref-thumb" data-row-action="preview-ref" data-id="${row.id}" title="Ảnh khung đầu: ${escapeHtml(row.referenceImage.name || "Ref")}" />
-              <button class="btn btn-danger btn-sm" style="padding:1px 4px; height:20px; font-size:10px" data-row-action="clear-ref" data-id="${row.id}">×</button>
-            </div>`;
-        }
-
-        const refHtml = `
-          <div class="ref-box">
-            ${charSlotHtml}
-            ${prodSlotHtml}
-            ${refSlotHtml}
-          </div>`;
-
-        let resultHtml = `<span style="color:var(--muted-foreground); font-size:11px">—</span>`;
-        if (row.mediaUrl) {
-          const isVid =
-            row.mode === "video" ||
-            row.mediaUrl.toLowerCase().endsWith(".mp4") ||
-            row.mediaUrl.toLowerCase().endsWith(".webm");
-          const fileTitle = row.filename || row.productTitle || "Video";
-          const vidPreviewSrc = isVid
-            ? `${row.mediaUrl}${row.mediaUrl.includes("?") ? "&" : "?"}r=2#t=0.5`
-            : row.mediaUrl;
-          resultHtml = `
-            <div class="result-thumb-wrap" title="Tên file: ${escapeHtml(fileTitle)}">
-              ${
-                isVid
-                  ? `<video src="${escapeHtml(vidPreviewSrc)}" class="result-thumb" preload="metadata" playsinline muted loop onmouseover="this.play()" onmouseout="this.pause()" data-row-action="preview-media" data-id="${row.id}"></video>`
-                  : `<img src="${escapeHtml(row.mediaUrl)}" class="result-thumb" data-row-action="preview-media" data-id="${row.id}" />`
-              }
-              <div style="display:flex; gap:3px">
-                <button class="btn btn-soft btn-sm" style="padding:0 6px; height:24px" data-row-action="preview-media" data-id="${row.id}" title="Xem trước: ${escapeHtml(fileTitle)}">${ICON.search}</button>
-                <a class="btn btn-sm" style="padding:0 6px; height:24px" href="${escapeHtml(row.mediaUrl)}" download="${escapeHtml(row.filename || "")}" title="Tải về: ${escapeHtml(fileTitle)}">${ICON.download}</a>
-              </div>
-            </div>`;
-        } else if (row.status === "error" && row.error) {
-          resultHtml = `<span style="color:var(--danger); font-size:10.5px; display:block; max-width:98px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap" title="${escapeHtml(row.error)}">${escapeHtml(row.error)}</span>`;
-        }
-
-        const durationOptsHtml = DURATION_OPTIONS.map((d) => {
-          return `<option value="${d}" ${rowDuration === d ? "selected" : ""}>${d}</option>`;
-        }).join("");
-        const qualityOptsHtml = QUALITY_OPTIONS.map(
-          (q) => `<option value="${q}" ${rowQuality === q ? "selected" : ""}>${q}</option>`
-        ).join("");
-
+    list.innerHTML = rows
+      .map((row) => {
+        const idx = state.batchRows.indexOf(row);
+        const thumb = thumbOf(row);
         return `
-          <tr class="${row.selected ? "row-selected" : ""}" data-row-id="${row.id}">
-            <td>
-              <input type="checkbox" class="row-check" data-id="${row.id}" ${row.selected ? "checked" : ""} />
-            </td>
-            <td><strong>${idx + 1}</strong></td>
-            <td>
-              <div style="display:flex; flex-direction:column; gap:3px">
-                <select class="select row-mode-select" data-id="${row.id}" style="height:24px; padding:1px 22px 1px 6px; font-size:11px; font-weight:600">
-                  <option value="video" ${row.mode !== "image" ? "selected" : ""}>Video AI</option>
-                  <option value="image" ${row.mode === "image" ? "selected" : ""}>Ảnh AI</option>
-                </select>
-                <span class="stream-badge" title="${escapeHtml(row.productTitle || row.filename || streamText)}">${escapeHtml(streamText)}</span>
-              </div>
-            </td>
-            <td>
-              <textarea class="cell-prompt-textarea row-prompt-input" spellcheck="false" data-id="${row.id}" title="${escapeHtml(row.prompt)}" placeholder="Nhập Prompt chi tiết...">${escapeHtml(row.prompt)}</textarea>
-            </td>
-            <td>${refHtml}</td>
-            <td>
-              <div style="display:flex; gap:3px; flex-wrap:nowrap; align-items:center">
-                <select class="select row-aspect-select" data-id="${row.id}" style="height:24px; padding:1px 18px 1px 5px; font-size:10.5px; width:52px" title="Tỉ lệ khung hình">
-                  <option value="9:16" ${row.aspectRatio === "9:16" ? "selected" : ""}>9:16</option>
-                  <option value="16:9" ${row.aspectRatio === "16:9" ? "selected" : ""}>16:9</option>
-                  <option value="1:1" ${row.aspectRatio === "1:1" ? "selected" : ""}>1:1</option>
-                  <option value="4:3" ${row.aspectRatio === "4:3" ? "selected" : ""}>4:3</option>
-                  <option value="3:4" ${row.aspectRatio === "3:4" ? "selected" : ""}>3:4</option>
-                </select>
-                <select class="select row-duration-select" data-id="${row.id}" style="height:24px; padding:1px 18px 1px 5px; font-size:10.5px; width:50px" title="Thời lượng Video (>10s tự ghép)">
-                  ${durationOptsHtml}
-                </select>
-                <select class="select row-quality-select" data-id="${row.id}" style="height:24px; padding:1px 18px 1px 5px; font-size:10.5px; width:46px; font-weight:700; color:var(--accent-strong)" title="Chất lượng 1K / 2K / 4K">
-                  ${qualityOptsHtml}
-                </select>
-              </div>
-            </td>
-            <td>
-              <span class="badge badge-idle" title="${escapeHtml(row.accountName || "Tự động LRU")}">${escapeHtml((row.accountName || "Tự động").slice(0, 10))}</span>
-            </td>
-            <td>${statusBadge}</td>
-            <td>${resultHtml}</td>
-            <td class="sticky-action-col">
-              <div style="display:flex; gap:4px; justify-content:center">
-                <button class="btn btn-primary btn-sm" style="padding:0 7px; height:26px" data-row-action="run" data-id="${row.id}" title="Chạy luồng này">${ICON.play}</button>
-                <button class="btn btn-danger btn-sm" style="padding:0 7px; height:26px" data-row-action="delete" data-id="${row.id}" title="Xóa luồng">${ICON.trash}</button>
-              </div>
-            </td>
-          </tr>
-        `;
+          <div class="queue-item${row.id === state.previewRowId ? " is-active" : ""}" role="listitem" data-row-id="${row.id}">
+            <input type="checkbox" class="row-check" data-id="${row.id}" ${row.selected ? "checked" : ""} aria-label="Chọn luồng ${idx + 1}" />
+            <div class="queue-thumb">${thumb}</div>
+            <button type="button" class="queue-open" data-preview-id="${row.id}" title="${escapeHtml(row.prompt || "")}">
+              <span class="queue-prompt">${escapeHtml(shortPrompt(row.prompt) || "Chưa có prompt")}</span>
+              <span class="queue-meta">${escapeHtml(rowMeta(row, idx))}</span>
+            </button>
+            <div class="queue-row-right">
+              <div class="queue-status">${rowStatusBadge(row)}</div>
+              ${rowQuickActions(row)}
+            </div>
+          </div>`;
       })
       .join("");
+    renderQueuePreview();
+  }
+
+  // Chip groups drive the original selects, so every reader and change handler of those selects keeps working.
+  const segSyncers = [];
+  function bindSegToSelect(name, selectId) {
+    const select = $(`#${selectId}`);
+    const radios = Array.from(document.querySelectorAll(`input[name="${name}"]`));
+    if (!select || !radios.length) return;
+    const sync = () => radios.forEach((r) => (r.checked = r.value === select.value));
+    radios.forEach((r) =>
+      r.addEventListener("change", () => {
+        if (!r.checked) return;
+        select.value = r.value;
+        select.dispatchEvent(new Event("change", { bubbles: true }));
+      })
+    );
+    select.addEventListener("change", sync);
+    segSyncers.push(sync);
+    sync();
+  }
+
+  let activeBatchQueue = [];
+  let batchGeneration = 0;
+  let lastClickedCheckRowId = "";
+
+  async function stopRows(targetRows, { silent = false, cancelAllServer = false } = {}) {
+    const rows = Array.isArray(targetRows) ? targetRows.filter(Boolean) : [];
+    const rowIds = [];
+    const jobIds = [];
+
+    for (const r of rows) {
+      rowIds.push(r.id);
+      if (r.jobId) jobIds.push(r.jobId);
+      r.cancelledByUser = true;
+      r.runToken = null;
+      r.status = r.mediaUrl ? "done" : "idle";
+      r.error = "";
+      r.progressPct = 0;
+      r.progressText = "Đã dừng";
+      activeClientRowIds.delete(r.id);
+      delete r.jobId;
+    }
+
+    if (activeBatchQueue.length > 0 && rowIds.length > 0) {
+      const stopSet = new Set(rowIds);
+      activeBatchQueue = activeBatchQueue.filter((item) => !stopSet.has(item.id));
+    }
+
+    if (cancelAllServer) {
+      batchGeneration += 1;
+      activeBatchQueue = [];
+      activeClientRowIds.clear();
+      state.batchRunning = false;
+    } else if (activeClientRowIds.size === 0 && activeBatchQueue.length === 0) {
+      state.batchRunning = false;
+    }
+
+    saveBatchRows();
+    renderBatchTable();
+
+    if (rowIds.length > 0 || jobIds.length > 0 || cancelAllServer) {
+      await api("/admin/generate/cancel", {
+        method: "POST",
+        body: {
+          rowIds,
+          jobIds,
+          all: Boolean(cancelAllServer),
+        },
+      }).catch(() => {});
+      loadStatus();
+    }
+
+    if (!silent && rows.length > 0) {
+      showToast(`Đã dừng ${rows.length} luồng đang chạy!`);
+    }
+    return rows.length;
+  }
+
+  async function stopSelectedBatch() {
+    const selectedRunning = state.batchRows.filter(
+      (r) => r.selected && (r.status === "running" || activeClientRowIds.has(r.id))
+    );
+    if (selectedRunning.length > 0) {
+      await stopRows(selectedRunning);
+      return;
+    }
+    if (state.batchRows.some((r) => r.selected)) {
+      showToast("Các luồng đã chọn không có luồng nào đang chạy.", true);
+      return;
+    }
+    const allRunning = state.batchRows.filter(
+      (r) => r.status === "running" || activeClientRowIds.has(r.id)
+    );
+    if (allRunning.length > 0) {
+      await stopRows(allRunning, { cancelAllServer: true });
+      return;
+    }
+    showToast("Hiện không có luồng nào đang chạy để dừng.", true);
+  }
+
+  async function stopAllBatch() {
+    const allRunning = state.batchRows.filter(
+      (r) => r.status === "running" || activeClientRowIds.has(r.id)
+    );
+    await stopRows(allRunning, { silent: true, cancelAllServer: true });
+    showToast(
+      allRunning.length > 0
+        ? `Đã dừng toàn bộ ${allRunning.length} luồng đang chạy!`
+        : "Đã dừng mọi tiến trình đang chạy trên máy chủ!"
+    );
+  }
+
+  async function bulkApplyPromptToSelected() {
+    const selected = state.batchRows.filter((r) => r.selected);
+    if (!selected.length) {
+      showToast("Vui lòng tích chọn ít nhất 1 luồng để sửa hàng loạt!", true);
+      return;
+    }
+    const runningSelected = selected.filter(
+      (r) => r.status === "running" || activeClientRowIds.has(r.id)
+    );
+    if (runningSelected.length > 0) {
+      await stopRows(runningSelected, { silent: true });
+    }
+
+    const fixedVidPrompt = getFixedVideoPrompt() || DEFAULT_FIXED_VIDEO_PROMPT;
+    const bulkMode = $("#bulkModeSelect")?.value || "video";
+    const aspectRatio = $("#bulkAspectSelect")?.value || "9:16";
+    const duration = $("#bulkDurationSelect")?.value || "20s";
+    const quality = $("#bulkQualitySelect")?.value || "4K";
+    const accountId = $("#bulkAccountSelect")?.value || "";
+    const accObj = state.accounts.find((a) => a.id === accountId);
+    const accountName = accObj ? accObj.name : "";
+    const charImg = state.bulkCharacterImage;
+
+    const linePrompts =
+      state.promptMode === "lines"
+        ? window.MusePromptLines.splitPromptLines($("#bulkVideoPromptsInput")?.value)
+        : [];
+
+    selected.filter((r) => r.status !== "done").forEach((r, idx) => {
+      if (state.promptMode === "lines" && linePrompts.length > 0) {
+        r.prompt = linePrompts[idx % linePrompts.length];
+      } else if (fixedVidPrompt.trim()) {
+        r.prompt = fixedVidPrompt.trim();
+      }
+      r.mode = bulkMode;
+      r.stepOrder = bulkMode === "image" ? 1 : 2;
+      r.aspectRatio = aspectRatio;
+      r.duration = duration;
+      r.quality = quality;
+      if (accountId !== undefined) {
+        r.accountId = accountId;
+        if (accountName) r.accountName = accountName;
+      }
+      if (charImg) {
+        r.characterImage = { ...charImg };
+      }
+      if (r.status === "error") {
+        r.status = "idle";
+        r.error = "";
+      }
+    });
+
+    saveBatchRows();
+    renderBatchTable();
+    showToast(
+      `Đã cập nhật Prompt & Cấu hình cho ${selected.length} luồng đã chọn${
+        runningSelected.length > 0 ? ` (đã dừng ${runningSelected.length} luồng đang chạy)` : ""
+      }!`
+    );
+  }
+
+  // Quick picks act on what the filter shows; hidden rows are unselected so a bulk action never reaches them.
+  function selectVisible(pred) {
+    const shown = new Set(visibleRows());
+    state.batchRows.forEach((r) => (r.selected = shown.has(r) && pred(r)));
+    renderBatchTable();
+  }
+
+  function retryErroredRows() {
+    const errored = state.batchRows.filter((r) => r.status === "error");
+    if (!errored.length) {
+      showToast("Không có luồng nào bị lỗi.", true);
+      return;
+    }
+    state.batchRows.forEach((r) => (r.selected = r.status === "error"));
+    errored.forEach((r) => {
+      r.status = "idle";
+      r.error = "";
+    });
+    renderBatchTable();
+    return runSelectedBatch();
   }
 
   async function runSingleRow(row, options = {}) {
@@ -1126,9 +1443,14 @@ curl ${baseUrlV1}/videos \\
       showToast("Prompt không được để trống!", true);
       return;
     }
-    if (activeClientRowIds.has(row.id)) {
+    if (activeClientRowIds.has(row.id) || row.status === "running") {
       return;
     }
+    row.cancelledByUser = false;
+    // A newer run or a stop replaces the token; this run then stops touching the row.
+    const runToken = {};
+    row.runToken = runToken;
+    const isStale = () => row.runToken !== runToken;
     activeClientRowIds.add(row.id);
     const rowMode = row.mode === "image" ? "image" : "video";
     row.mode = rowMode;
@@ -1137,7 +1459,7 @@ curl ${baseUrlV1}/videos \\
     row.mediaUrl = "";
     row.filename = "";
     row.progressPct = 5;
-    row.progressText = "Đang khởi tạo trên Chrome...";
+    row.progressText = "Đang khởi tạo trên cổng Gateway...";
     renderBatchTable();
 
     try {
@@ -1187,20 +1509,34 @@ curl ${baseUrlV1}/videos \\
         },
       });
 
+      if (isStale()) {
+        if (startRes?.jobId) {
+          api("/admin/generate/cancel", { method: "POST", body: { jobIds: [startRes.jobId] } }).catch(() => {});
+        }
+        return;
+      }
+
       let res = null;
       if (startRes.async && startRes.jobId) {
+        row.jobId = startRes.jobId;
         const pollStartedAt = Date.now();
         const maxPollMs = 120 * 60 * 1000; // Wait up to 120 minutes for multi-stream / long video stitching
         while (Date.now() - pollStartedAt < maxPollMs) {
+          if (isStale()) return;
           await new Promise((r) => setTimeout(r, 1500));
+          if (isStale()) return;
           let jobRes = null;
           try {
             jobRes = await api(`/admin/generate/job/${encodeURIComponent(startRes.jobId)}`);
           } catch (pollErr) {
+            if (isStale()) return;
             if (/Job not found|404/i.test(String(pollErr.message || ""))) {
               throw new Error("Tiến trình tạo video trên máy chủ đã bị ngắt hoặc hết hạn");
             }
             continue;
+          }
+          if (isStale() || jobRes.status === "cancelled") {
+            return;
           }
           if (typeof jobRes.progress === "number" && jobRes.progress > 0) {
             row.progressPct = jobRes.progress;
@@ -1208,21 +1544,24 @@ curl ${baseUrlV1}/videos \\
           if (jobRes.progress_text) {
             row.progressText = jobRes.progress_text;
           }
+          updateRunningRowBadgesInDom();
           if (jobRes.status === "done" && jobRes.result) {
             res = jobRes.result;
             break;
           }
           if (jobRes.status === "error") {
-            throw new Error(jobRes.error || "Lỗi tạo video trên Chrome");
+            throw new Error(jobRes.error || "Lỗi tạo video qua cổng Gateway");
           }
         }
+        if (isStale()) return;
         if (!res) {
-          throw new Error("Quá thời gian chờ Chrome tạo & ghép video hoàn tất");
+          throw new Error("Quá thời gian chờ tạo & ghép video hoàn tất");
         }
       } else {
         res = startRes;
       }
 
+      if (isStale()) return;
       if (!res || !res.mediaUrl) {
         throw new Error("Chrome chưa xuất xong file Video hoàn chỉnh");
       }
@@ -1240,13 +1579,26 @@ curl ${baseUrlV1}/videos \\
       renderBatchTable();
       loadStatus();
     } catch (err) {
+      if (isStale() || /Đã dừng bởi người dùng|cancelled/i.test(String(err?.message || ""))) {
+        row.status = row.mediaUrl ? "done" : "idle";
+        row.error = "";
+        row.progressPct = 0;
+        row.progressText = "Đã dừng";
+        saveBatchRows();
+        renderBatchTable();
+        return;
+      }
       row.status = "error";
       row.error = err.message;
       saveBatchRows();
       renderBatchTable();
       showToast(`Lỗi dòng [${row.prompt.slice(0, 28)}...]: ${err.message}`, true);
     } finally {
-      activeClientRowIds.delete(row.id);
+      if (!isStale()) {
+        activeClientRowIds.delete(row.id);
+        delete row.jobId;
+        row.runToken = null;
+      }
       if (!options.fromBatch && activeClientRowIds.size === 0 && !state.batchRunning) {
         await api("/admin/chrome/close", { method: "POST" }).catch(() => {});
         loadStatus();
@@ -1255,6 +1607,10 @@ curl ${baseUrlV1}/videos \\
   }
 
   async function runSelectedBatch() {
+    if (state.batchRunning && activeBatchQueue.length > 0) {
+      showToast("Đang có tiến trình chạy hàng loạt đang thực thi!", true);
+      return;
+    }
     sortBatchRowsByStream();
     renderProductChips();
 
@@ -1269,7 +1625,7 @@ curl ${baseUrlV1}/videos \\
     }
 
     const runnableRows = state.batchRows.filter(
-      (r) => !activeClientRowIds.has(r.id) && r.prompt && r.prompt.trim()
+      (r) => !activeClientRowIds.has(r.id) && r.status !== "running" && r.prompt && r.prompt.trim()
     );
 
     // 1. Check explicitly selected rows
@@ -1298,7 +1654,7 @@ curl ${baseUrlV1}/videos \\
 
     if (!targets.length) {
       if (activeClientRowIds.size > 0) {
-        showToast(`⏳ Đang có ${activeClientRowIds.size} luồng đang chạy trên Chrome!`, false);
+        showToast(`Đang có ${activeClientRowIds.size} luồng đang chạy!`, true);
       } else {
         showToast("Vui lòng tích chọn ít nhất 1 luồng (hoặc thêm sản phẩm mới) để chạy!", true);
       }
@@ -1311,36 +1667,44 @@ curl ${baseUrlV1}/videos \\
     const streamConcurrency = Math.min(configuredConcurrency, targets.length);
 
     showToast(
-      `🚀 Bắt đầu chạy ${targets.length} Luồng Video (tối đa ${streamConcurrency} luồng song song)...`
+      `Bắt đầu chạy ${targets.length} Luồng (tối đa ${streamConcurrency} luồng song song)...`
     );
 
-    const queue = [...targets];
+    const batchId = ++batchGeneration;
+    activeBatchQueue = [...targets];
     const workers = Array.from(
-      { length: Math.min(streamConcurrency, queue.length) },
+      { length: Math.min(streamConcurrency, activeBatchQueue.length) },
       async () => {
-        while (queue.length > 0) {
-          const item = queue.shift();
-          if (item) await runSingleRow(item, { fromBatch: true });
+        while (activeBatchQueue.length > 0 && state.batchRunning && batchId === batchGeneration) {
+          const item = activeBatchQueue.shift();
+          if (item && state.batchRows.includes(item)) {
+            await runSingleRow(item, { fromBatch: true });
+          }
         }
       }
     );
     await Promise.all(workers);
+    if (batchId !== batchGeneration) return;
 
     if (activeClientRowIds.size === 0) {
+      const wasRunning = state.batchRunning;
       state.batchRunning = false;
+      activeBatchQueue = [];
       await api("/admin/chrome/close", { method: "POST" }).catch(() => {});
       loadStatus();
-      const doneCount = targets.filter((r) => r.status === "done" && r.mediaUrl).length;
-      const errCount = targets.filter((r) => r.status === "error").length;
-      if (errCount === 0) {
-        showToast(
-          `✅ Đã hoàn tất toàn bộ ${doneCount}/${targets.length} Luồng sản xuất Video & tự động đóng Chrome!`
-        );
-      } else {
-        showToast(
-          `⚠️ Đã xử lý xong: Hoàn tất ${doneCount}/${targets.length} luồng, lỗi ${errCount} luồng.`,
-          errCount === targets.length
-        );
+      if (wasRunning) {
+        const doneCount = targets.filter((r) => r.status === "done" && r.mediaUrl).length;
+        const errCount = targets.filter((r) => r.status === "error").length;
+        if (errCount === 0 && doneCount > 0) {
+          showToast(
+            `Đã hoàn tất ${doneCount}/${targets.length} Luồng sản xuất Video!`
+          );
+        } else if (errCount > 0) {
+          showToast(
+            `Đã xử lý xong: Hoàn tất ${doneCount}/${targets.length} luồng, lỗi ${errCount} luồng.`,
+            errCount === targets.length
+          );
+        }
       }
     }
   }
@@ -1558,7 +1922,13 @@ curl ${baseUrlV1}/videos \\
     // Fixed Video Prompt: Auto-save to localStorage & live-sync to Product Video Streams
     $("#bulkVideoPromptsInput")?.addEventListener("input", (e) => {
       const val = String(e.target.value || "");
-      localStorage.setItem("embong_fixed_video_prompt", val);
+      if (state.promptMode === "lines") {
+        // A list only becomes rows on "Thêm vào bảng"; typing never rewrites rows already in the table.
+        localStorage.setItem(PROMPT_LINES_KEY, val);
+        updatePromptHint();
+        return;
+      }
+      localStorage.setItem(PROMPT_SINGLE_KEY, val);
       const cleanVal = val.trim();
       if (!cleanVal) return;
       for (const r of state.batchRows) {
@@ -1574,17 +1944,25 @@ curl ${baseUrlV1}/videos \\
     });
 
     $("#btnResetDefaultPrompts")?.addEventListener("click", () => {
-      if ($("#bulkVideoPromptsInput")) {
-        $("#bulkVideoPromptsInput").value = DEFAULT_FIXED_VIDEO_PROMPT;
-      }
-      localStorage.setItem("embong_fixed_video_prompt", DEFAULT_FIXED_VIDEO_PROMPT);
-      syncStreamsFromProducts({ preserveFinished: false });
-      showToast("↺ Đã khôi phục Prompt Tạo Video cố định mặc định!");
+      loadPromptsIntoInput([DEFAULT_FIXED_VIDEO_PROMPT]);
+      if (state.promptMode !== "lines") syncStreamsFromProducts({ preserveFinished: false });
+      showToast("Đã khôi phục prompt mẫu mặc định.");
     });
 
-    // Prompt Stream Creation Controls inside the Fixed Video Prompt panel
+    for (const radio of document.querySelectorAll('input[name="promptMode"]')) {
+      radio.addEventListener("change", () => {
+        if (!radio.checked) return;
+        state.promptMode = radio.value === "lines" ? "lines" : "single";
+        localStorage.setItem(PROMPT_MODE_KEY, state.promptMode);
+        applyPromptMode();
+      });
+    }
+    $("#promptRepeatInput")?.addEventListener("input", updatePromptHint);
+
+    // One shared prompt fills the stream count; a list adds one row per line.
     $("#btnCreateStreamsFromPrompt")?.addEventListener("click", () => {
-      createStreamsFromPrompt();
+      if (state.promptMode === "lines") addRowsFromPromptLines();
+      else createStreamsFromPrompt();
     });
 
     $("#btnAddOneStream")?.addEventListener("click", () => {
@@ -1618,7 +1996,8 @@ curl ${baseUrlV1}/videos \\
 
     $("#btnLoadAndRunBulk")?.addEventListener("click", async () => {
       if (state.batchRows.length === 0) {
-        createStreamsFromPrompt();
+        if (state.promptMode === "lines") addRowsFromPromptLines();
+        else createStreamsFromPrompt();
       } else {
         syncStreamsFromProducts({ preserveFinished: true });
       }
@@ -1683,7 +2062,7 @@ curl ${baseUrlV1}/videos \\
           }
           saveBatchRows();
           renderBatchTable();
-          showToast(`👤 Đã gắn ảnh Nhân vật cố định [${file.name}] cho mọi Luồng Video!`);
+          showToast(`Đã gắn ảnh Nhân vật cố định [${file.name}] cho mọi Luồng Video!`);
         } else if (target === "script") {
           state.scriptCharacterImage = imgObj;
           if ($("#scriptCharacterThumb")) $("#scriptCharacterThumb").src = dataUrl;
@@ -1736,8 +2115,7 @@ curl ${baseUrlV1}/videos \\
       const loadedObjs = await readFilesAsProductObjs(files);
       if (!loadedObjs.length) return;
 
-      const fixedPrompt =
-        ($("#bulkVideoPromptsInput")?.value || "").trim() || DEFAULT_FIXED_VIDEO_PROMPT;
+      const fixedPrompt = getFixedVideoPrompt() || DEFAULT_FIXED_VIDEO_PROMPT;
       const bulkMode = $("#bulkModeSelect")?.value || "video";
       const aspectRatio = $("#bulkAspectSelect")?.value || "9:16";
       const duration = $("#bulkDurationSelect")?.value || "20s";
@@ -1788,7 +2166,7 @@ curl ${baseUrlV1}/videos \\
       saveBatchRows();
       renderBatchTable();
       showToast(
-        `📦 Đã thêm ${loadedObjs.length} sản phẩm mới (Giữ nguyên toàn bộ luồng cũ · Tổng: ${state.batchRows.length} Luồng)!`
+        `Đã thêm ${loadedObjs.length} sản phẩm mới (Giữ nguyên toàn bộ luồng cũ, Tổng: ${state.batchRows.length} Luồng)!`
       );
     };
 
@@ -1811,7 +2189,13 @@ curl ${baseUrlV1}/videos \\
       });
     }
 
-    $("#btnClearBulkProduct")?.addEventListener("click", () => {
+    $("#btnClearBulkProduct")?.addEventListener("click", async () => {
+      const running = state.batchRows.filter(
+        (r) => r.status === "running" || activeClientRowIds.has(r.id)
+      );
+      if (running.length > 0) {
+        await stopRows(running, { silent: true, cancelAllServer: true });
+      }
       state.bulkProductImages = [];
       state.bulkProductImage = null;
       state.batchRows = [];
@@ -1826,6 +2210,10 @@ curl ${baseUrlV1}/videos \\
       if (!rmBtn) return;
       const rowId = rmBtn.dataset.removeBulkRow;
       if (rowId) {
+        const chipRow = state.batchRows.find((r) => r.id === rowId);
+        if (chipRow && (chipRow.status === "running" || activeClientRowIds.has(chipRow.id))) {
+          stopRows([chipRow], { silent: true });
+        }
         state.batchRows = state.batchRows.filter((r) => r.id !== rowId);
       } else {
         const idx = Number(rmBtn.dataset.removeBulkProd);
@@ -1881,7 +2269,7 @@ curl ${baseUrlV1}/videos \\
         renderProductChips();
         const totalSp = state.scriptProductImages.length;
         showToast(
-          `📦 Đã đính kèm ${loadedObjs.length} sản phẩm (Tổng: ${totalSp} Luồng SP) cho AI viết kịch bản!`
+          `Đã đính kèm ${loadedObjs.length} sản phẩm (Tổng: ${totalSp} Luồng SP) cho AI viết kịch bản!`
         );
       } else {
         const loadedObjs = await readFilesAsProductObjs(files);
@@ -1899,20 +2287,65 @@ curl ${baseUrlV1}/videos \\
 
     $("#selectAllBatch")?.addEventListener("change", (e) => {
       const checked = e.target.checked;
-      state.batchRows.forEach((r) => {
+      visibleRows().forEach((r) => {
         r.selected = checked;
       });
       renderBatchTable();
     });
 
-    $("#btnDeleteSelectedBatch")?.addEventListener("click", () => {
+    $("#btnQueueAddRow")?.addEventListener("click", () => {
+      addOneStreamFromPrompt({ focusPreview: true });
+    });
+
+    $("#btnSelectAllRows")?.addEventListener("click", () => {
+      visibleRows().forEach((r) => {
+        r.selected = true;
+      });
+      renderBatchTable();
+    });
+
+    $("#btnUnselectAll")?.addEventListener("click", () => {
+      state.batchRows.forEach((r) => {
+        r.selected = false;
+      });
+      renderBatchTable();
+    });
+
+    $("#btnSelectRunning")?.addEventListener("click", () =>
+      selectVisible((r) => r.status === "running" || activeClientRowIds.has(r.id))
+    );
+
+    $("#btnBulkApplyPrompt")?.addEventListener("click", () => {
+      bulkApplyPromptToSelected();
+    });
+
+    $("#btnStopSelectedBatch")?.addEventListener("click", () => {
+      stopSelectedBatch();
+    });
+
+    $("#btnStopAllBatch")?.addEventListener("click", () => {
+      stopAllBatch();
+    });
+
+    $("#btnDeleteSelectedBatch")?.addEventListener("click", async () => {
+      const selectedRows = state.batchRows.filter((r) => r.selected);
+      if (!selectedRows.length) {
+        showToast("Chưa chọn luồng nào để xoá!", true);
+        return;
+      }
+      const runningSelected = selectedRows.filter(
+        (r) => r.status === "running" || activeClientRowIds.has(r.id)
+      );
+      if (runningSelected.length > 0) {
+        await stopRows(runningSelected, { silent: true });
+      }
       const before = state.batchRows.length;
       state.batchRows = state.batchRows.filter((r) => !r.selected);
       sortBatchRowsByStream();
       renderProductChips();
       saveBatchRows();
       renderBatchTable();
-      showToast(`Đã xóa ${before - state.batchRows.length} mục đã chọn.`);
+      showToast(`Đã xóa ${before - state.batchRows.length} luồng đã chọn.`);
     });
 
     $("#btnRunSelectedBatch")?.addEventListener("click", async () => {
@@ -1922,6 +2355,28 @@ curl ${baseUrlV1}/videos \\
       await runSelectedBatch();
     });
     $("#btnDownloadSelectedBatch")?.addEventListener("click", () => downloadSelectedBatch());
+    $("#btnRetryErrored")?.addEventListener("click", () => retryErroredRows());
+    $("#btnSelectErrored")?.addEventListener("click", () => selectVisible((r) => r.status === "error"));
+    $("#btnSelectPending")?.addEventListener("click", () => selectVisible((r) => !r.status || r.status === "idle"));
+    $("#queueSearch")?.addEventListener("input", (e) => {
+      state.queueFilter.q = e.target.value;
+      renderBatchTable();
+    });
+    $("#queueStatusFilter")?.addEventListener("change", (e) => {
+      state.queueFilter.status = e.target.value;
+      renderBatchTable();
+    });
+    for (const radio of document.querySelectorAll('input[name="queueView"]')) {
+      radio.checked = radio.value === state.queueView;
+      radio.addEventListener("change", () => {
+        if (!radio.checked) return;
+        state.queueView = radio.value;
+        localStorage.setItem("muse_queue_view", state.queueView);
+        renderBatchTable();
+      });
+    }
+    bindSegToSelect("bulkModeTab", "bulkModeSelect");
+    bindSegToSelect("bulkAspectTab", "bulkAspectSelect");
 
     const openFolderHandler = async () => {
       if (window.embongDesktop && window.embongDesktop.openMediaFolder) {
@@ -1934,18 +2389,20 @@ curl ${baseUrlV1}/videos \\
     $("#btnOpenMediaFolderGallery")?.addEventListener("click", openFolderHandler);
 
     // Table delegations
-    $("#batchTableBody")?.addEventListener("input", (e) => {
+    $(".studio")?.addEventListener("input", (e) => {
       const t = e.target;
       const id = t.dataset.id;
       const row = state.batchRows.find((r) => r.id === id);
       if (!row) return;
       if (t.classList.contains("row-prompt-input")) {
         row.prompt = t.value;
+        const listText = document.querySelector(`.queue-item[data-row-id="${id}"] .queue-prompt`);
+        if (listText) listText.textContent = shortPrompt(t.value) || "Chưa có prompt";
         scheduleSaveBatchRows();
       }
     });
 
-    $("#batchTableBody")?.addEventListener("change", (e) => {
+    $(".studio")?.addEventListener("change", (e) => {
       const t = e.target;
       const id = t.dataset.id;
       const row = state.batchRows.find((r) => r.id === id);
@@ -1962,16 +2419,45 @@ curl ${baseUrlV1}/videos \\
       } else if (t.classList.contains("row-aspect-select")) {
         row.aspectRatio = t.value;
         saveBatchRows();
+        renderBatchTable();
       } else if (t.classList.contains("row-duration-select")) {
         row.duration = t.value;
         saveBatchRows();
+        renderBatchTable();
       } else if (t.classList.contains("row-quality-select")) {
         row.quality = t.value;
         saveBatchRows();
+        renderBatchTable();
       }
     });
 
-    $("#batchTableBody")?.addEventListener("click", (e) => {
+    $(".studio")?.addEventListener("click", async (e) => {
+      const checkEl = e.target.closest(".row-check");
+      if (checkEl) {
+        const clickedId = checkEl.dataset.id;
+        if (e.shiftKey && lastClickedCheckRowId && lastClickedCheckRowId !== clickedId) {
+          const vis = visibleRows();
+          const i1 = vis.findIndex((r) => r.id === lastClickedCheckRowId);
+          const i2 = vis.findIndex((r) => r.id === clickedId);
+          if (i1 >= 0 && i2 >= 0) {
+            const [start, end] = i1 < i2 ? [i1, i2] : [i2, i1];
+            const targetState = checkEl.checked;
+            for (let i = start; i <= end; i += 1) {
+              vis[i].selected = targetState;
+            }
+            renderBatchTable();
+          }
+        }
+        lastClickedCheckRowId = clickedId;
+        return;
+      }
+
+      const opener = e.target.closest("[data-preview-id]");
+      if (opener) {
+        state.previewRowId = opener.dataset.previewId;
+        renderBatchTable();
+        return;
+      }
       if (e.target.closest("[data-empty-create-from-prompt]")) {
         createStreamsFromPrompt();
         return;
@@ -1989,12 +2475,29 @@ curl ${baseUrlV1}/videos \\
 
       if (action === "run") {
         runSingleRow(row);
+      } else if (action === "stop") {
+        await stopRows([row]);
+      } else if (action === "restart") {
+        await stopRows([row], { silent: true });
+        runSingleRow(row);
+      } else if (action === "edit") {
+        state.previewRowId = row.id;
+        renderBatchTable();
+        const promptInput = $("#previewPrompt");
+        if (promptInput) {
+          promptInput.focus();
+          promptInput.setSelectionRange(promptInput.value.length, promptInput.value.length);
+        }
       } else if (action === "delete") {
+        if (row.status === "running" || activeClientRowIds.has(row.id)) {
+          await stopRows([row], { silent: true });
+        }
         state.batchRows = state.batchRows.filter((r) => r.id !== id);
         sortBatchRowsByStream();
         renderProductChips();
         saveBatchRows();
         renderBatchTable();
+        showToast("Đã xoá luồng khỏi hàng đợi.");
       } else if (action === "upload-character") {
         state.pendingCharacterTarget = id;
         $("#hiddenCharacterImageInput")?.click();
@@ -2070,11 +2573,11 @@ curl ${baseUrlV1}/videos \\
     // Show & Hide Chrome Window buttons
     const showChromeHandler = async () => {
       try {
-        showToast("👁 Đang sắp xếp gọn & hiển thị các cửa sổ Chrome trên màn hình...");
+        showToast("Đang sắp xếp gọn & hiển thị các cửa sổ Chrome trên màn hình...");
         await api("/admin/chrome/show", { method: "POST" });
         updateChromeVisibilityButtons(true);
         await loadStatus();
-        showToast("👁 Đã xếp gọn và hiển thị các cửa sổ Chrome dạng lưới nhỏ!");
+        showToast("Đã xếp gọn và hiển thị các cửa sổ Chrome dạng lưới nhỏ!");
       } catch (err) {
         showToast(`Lỗi hiện Chrome: ${err.message}`, true);
       }
@@ -2084,7 +2587,7 @@ curl ${baseUrlV1}/videos \\
         await api("/admin/chrome/hide", { method: "POST" });
         updateChromeVisibilityButtons(false);
         await loadStatus();
-        showToast("🙈 Đã ẩn hoàn toàn cửa sổ Chrome khỏi màn hình (Vẫn chạy ngầm 100% tốc độ)!");
+        showToast("Đã ẩn hoàn toàn cửa sổ Chrome khỏi màn hình (Vẫn chạy ngầm 100% tốc độ)!");
       } catch (err) {
         showToast(`Lỗi ẩn Chrome: ${err.message}`, true);
       }
@@ -2462,11 +2965,7 @@ curl ${baseUrlV1}/videos \\
             : Array.isArray(res.prompts)
             ? res.prompts
             : [];
-        if (vidLines.length && $("#bulkVideoPromptsInput")) {
-          const joinedVid = vidLines.join(" ");
-          $("#bulkVideoPromptsInput").value = joinedVid;
-          localStorage.setItem("embong_fixed_video_prompt", joinedVid);
-        }
+        if (vidLines.length) loadPromptsIntoInput(vidLines);
         if (apiKey && $("#setGeminiApiKey")) {
           $("#setGeminiApiKey").value = apiKey;
         }
@@ -2486,10 +2985,7 @@ curl ${baseUrlV1}/videos \\
     });
 
     const pushScriptToBatchTable = () => {
-      const lines = String($("#scriptResultOutput")?.value || "")
-        .split("\n")
-        .map((l) => l.replace(/^\[(IMAGE|ANH|ẢNH|VIDEO|VID)\]\s*:?\s*/i, "").trim())
-        .filter(Boolean);
+      const lines = window.MusePromptLines.splitPromptLines($("#scriptResultOutput")?.value);
       if (!lines.length) {
         showToast("Chưa có nội dung Prompt Video nào để đẩy sang bảng!", true);
         return false;
@@ -2497,11 +2993,7 @@ curl ${baseUrlV1}/videos \\
       const duration = $("#scriptDurationSelect")?.value || "20s";
       const quality = $("#scriptQualitySelect")?.value || "4K";
 
-      if ($("#bulkVideoPromptsInput")) {
-        const fixedVid = lines.join(" ");
-        $("#bulkVideoPromptsInput").value = fixedVid;
-        localStorage.setItem("embong_fixed_video_prompt", fixedVid);
-      }
+      loadPromptsIntoInput(lines);
 
       if ($("#bulkDurationSelect")) $("#bulkDurationSelect").value = duration;
       if ($("#bulkQualitySelect")) $("#bulkQualitySelect").value = quality;
@@ -2514,8 +3006,7 @@ curl ${baseUrlV1}/videos \\
       }
 
       if (state.scriptProductImages.length > 0) {
-        const fixedVidPrompt =
-          ($("#bulkVideoPromptsInput")?.value || "").trim() || DEFAULT_FIXED_VIDEO_PROMPT;
+        const fixedVidPrompt = getFixedVideoPrompt() || DEFAULT_FIXED_VIDEO_PROMPT;
         const aspectRatio = $("#bulkAspectSelect")?.value || "9:16";
         const accountId = $("#bulkAccountSelect")?.value || "";
         const accObj = state.accounts.find((a) => a.id === accountId);
@@ -2560,11 +3051,11 @@ curl ${baseUrlV1}/videos \\
       const spCount = state.batchRows.length;
       if (spCount > 0) {
         showToast(
-          `📥 Đã cập nhật Prompt Video Cố Định & sẵn sàng ${spCount} Luồng tạo Video!`
+          `Đã cập nhật Prompt Video Cố Định & sẵn sàng ${spCount} Luồng tạo Video!`
         );
       } else {
         showToast(
-          `📥 Đã lưu vào Prompt Video Cố Định! Hãy ném Ảnh Sản phẩm vào để tạo Luồng Video chạy ngay.`
+          `Đã lưu vào Prompt Video Cố Định! Hãy ném Ảnh Sản phẩm vào để tạo Luồng Video chạy ngay.`
         );
       }
       return spCount > 0;
@@ -2692,7 +3183,7 @@ curl ${baseUrlV1}/videos \\
         const text = copyBtn.getAttribute("data-copy-text") || "";
         if (text) {
           navigator.clipboard.writeText(text).catch(() => {});
-          showToast(`☕ Đã sao chép: ${text} (EM BÔNG AI · MB BANK)!`);
+          showToast(`Đã sao chép: ${text} (EM BÔNG AI, MB BANK)!`);
         }
       }
     });
@@ -2717,19 +3208,19 @@ curl ${baseUrlV1}/videos \\
 
     $("#btnCopyBankTop")?.addEventListener("click", () => {
       navigator.clipboard.writeText("0843738866").catch(() => {});
-      showToast("☕ Đã sao chép STK: 0843738866 (MB BANK - EM BÔNG AI)!");
+      showToast("Đã sao chép STK: 0843738866 (MB BANK - EM BÔNG AI)!");
     });
 
     $("#btnCopySupportPhone")?.addEventListener("click", () => {
       navigator.clipboard.writeText("0843738866").catch(() => {});
-      showToast("☎️ Đã sao chép SĐT Hỗ trợ: 0843738866!");
+      showToast("Đã sao chép SĐT Hỗ trợ: 0843738866!");
     });
 
     const zoomQrHandler = () => {
       openMediaPreview(
         "/assets/donate-qr-mbbank.png",
         "image",
-        "☕ Mời cafe EM BÔNG AI — 084.373.8866 MB BANK (TRAN LINH QUANG)"
+        "Mời cafe EM BÔNG AI: 084.373.8866 MB BANK (TRAN LINH QUANG)"
       );
     };
     $("#btnZoomDonateQr")?.addEventListener("click", zoomQrHandler);

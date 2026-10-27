@@ -1,6 +1,15 @@
-/* ==========================================================================
-   MUSE AI STUDIO v2.0 — Authentic shadcn/ui Design System (New York · Zinc)
-   ========================================================================== */
+/* Hallmark · checked: 2026-10-27 · genre: modern-minimal (inferred) · shape: app screen
+ * floor: 0 FAIL · reflex: 0 · fixed: 21 (4, 7a, 7b, 10a, 19, 27, 29, 30a, 33, 34, 39a, 39b, 40, 48, 49a, 50, 56, 63, 67, 75, 76) · structural: 24b spacing printed as notes
+ * finish-review: subagent · 5 findings · 5 resolved · gap: none
+ * built: the project · redesign: polish · v2.0.0 */
+/* Hallmark · answered F7 · an app screen keeps one container recipe on purpose: sidebar cards, panels and the batch table share it */
+/* Hallmark · answered F25 · the Electron window has a 1120px minimum width (desktop/main.js), so no phone ever renders the batch table */
+/* Hallmark · waive 39b · queue rows are 56px open buttons beside a 56px thumbnail · each queue row opens its stream in the preview, so the whole row is the target; toolbar controls stay at 32px */
+/* Hallmark · dismissed 40 · the queue thumb shows only a placeholder icon until a render exists, and 3.63:1 clears the 3:1 icon threshold */
+/* Hallmark · dropped /v1/media/job_fake_2.mp4, /v1/media/job_fake_3.mp4, /v1/media/job_fake_4.mp4, /v1/media/job_fake_5.mp4, /v1/media/job_fake_6.mp4 · the user asked for a queue list with a preview: each stream's download link and editors now sit in the preview for the stream picked */
+/* Hallmark · kept words checked · the markup holds 981 words against 982 before (the title's "&amp;", two lowercased table heads); the 1438 counted every hidden view of the unstyled disk render */
+
+/* Muse AI Studio v2.0, shadcn/ui New York zinc system */
 
 :root,
 [data-theme="dark"] {
@@ -29,7 +38,7 @@
   --secondary-hover: #27272a;
   --surface-muted: #18181b;
   --muted: #a1a1aa;
-  --muted-foreground: #a1a1aa;
+  --muted-foreground: #a8a8b1;
 
   /* Accent (Hover states) */
   --accent: #1f1f23;
@@ -69,23 +78,50 @@
   --shadow-lg: 0 12px 32px -4px rgba(0, 0, 0, 0.65);
 
   --sidebar-bg: #09090b;
+
+  /* Type */
+  --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Geist", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  --font-mono: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+
+  /* States, edges and grounds (every literal colour lives here) */
+  --brand-hover: #059669;
+  --focus: #34d399;
+  --field-edge: #6b6b74;
+  --on-danger: #fef2f2;
+  --danger-strong: #b91c1c;
+  --danger-border: rgba(239, 68, 68, 0.28);
+  --danger-border-strong: rgba(239, 68, 68, 0.45);
+  --danger-ink-soft: #fca5a5;
+  --warn-border: rgba(245, 158, 11, 0.28);
+  --success-border: rgba(16, 185, 129, 0.28);
+  --info: #60a5fa;
+  --info-border: rgba(59, 130, 246, 0.28);
+  --row-hover: rgba(161, 161, 170, 0.04);
+  --row-selected: rgba(16, 185, 129, 0.04);
+  --scrim: rgba(9, 9, 11, 0.78);
+  --media-ground: #050507;
 }
 
 [data-theme="light"] {
-  --background: #ffffff;
+  --background: #f6fbf8;
   --foreground: #09090b;
-  --card: #ffffff;
+  --card: #f6fbf8;
   --card-foreground: #09090b;
   --card-elevated: #fafafa;
-  --popover: #ffffff;
+  --popover: #f6fbf8;
   --popover-foreground: #09090b;
 
   --primary: #18181b;
   --primary-foreground: #fafafa;
   --primary-hover: #27272a;
 
-  --brand: #059669;
-  --brand-foreground: #ffffff;
+  --brand: #047857;
+  --brand-foreground: #f0fdf4;
+  --brand-hover: #065f46;
+  --focus: #047857;
+  --field-edge: #8a8a93;
+  --danger-ink-soft: #b91c1c;
+  --info: #2563eb;
   --brand-soft: rgba(5, 150, 105, 0.08);
   --brand-border: rgba(5, 150, 105, 0.25);
 
@@ -94,7 +130,7 @@
   --secondary-hover: #e4e4e7;
   --surface-muted: #f4f4f5;
   --muted: #71717a;
-  --muted-foreground: #71717a;
+  --muted-foreground: #67676f;
 
   --accent: #f4f4f5;
   --accent-foreground: #18181b;
@@ -136,12 +172,12 @@ body {
   height: 100%;
   background: var(--background);
   color: var(--foreground);
-  font-family: -apple-system, BlinkMacSystemFont, "Inter", "Geist", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-sans);
   font-size: 13px;
   line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  overflow: hidden;
+  overflow: clip;
   user-select: none;
 }
 
@@ -180,7 +216,7 @@ svg.lucide,
   display: grid;
   grid-template-columns: 244px minmax(0, 1fr);
   height: 100vh;
-  width: 100vw;
+  width: 100%;
   background: var(--background);
 }
 
@@ -245,7 +281,7 @@ svg.lucide,
 }
 
 .brand-badge {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
   padding: 1px 5px;
   border-radius: 4px;
@@ -291,9 +327,10 @@ svg.lucide,
   justify-content: space-between;
   gap: 8px;
   cursor: pointer;
-  transition: all 0.12s ease;
+  transition: background-color 0.12s ease, color 0.12s ease, border-color 0.12s ease;
   text-align: left;
   font-family: inherit;
+  white-space: nowrap;
 }
 
 .nav-item:hover {
@@ -333,7 +370,7 @@ svg.lucide,
 }
 
 .nav-badge {
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
   padding: 1px 6px;
   border-radius: 999px;
@@ -363,10 +400,8 @@ svg.lucide,
 }
 
 .sidebar-card-title {
-  font-size: 10.5px;
+  font-size: 12px;
   font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
   color: var(--muted-foreground);
   display: flex;
   align-items: center;
@@ -377,8 +412,13 @@ svg.lucide,
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
   font-size: 12px;
   color: var(--muted-foreground);
+}
+
+.sidebar-stat-row > span:first-child {
+  white-space: nowrap;
 }
 
 .sidebar-stat-row strong {
@@ -402,7 +442,7 @@ svg.lucide,
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 5px 8px;
-  font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 11px;
   color: var(--foreground);
   display: flex;
@@ -453,8 +493,8 @@ svg.lucide,
   border: none;
   background: transparent;
   color: var(--foreground);
-  width: 24px;
-  height: 22px;
+  width: 32px;
+  height: 32px;
   font-size: 12px;
   font-weight: 600;
   cursor: pointer;
@@ -482,6 +522,7 @@ svg.lucide,
   border: 1px solid var(--border);
   background: var(--card);
   color: var(--foreground);
+  min-height: 32px;
   padding: 6px 10px;
   border-radius: var(--radius-sm);
   font-size: 12px;
@@ -491,7 +532,7 @@ svg.lucide,
   align-items: center;
   justify-content: center;
   gap: 7px;
-  transition: all 0.15s ease;
+  transition: background-color 0.15s ease, border-color 0.15s ease, color 0.15s ease;
   font-family: inherit;
   box-shadow: var(--shadow-xs);
 }
@@ -663,14 +704,14 @@ svg.lucide,
 /* Brand / Emerald Button */
 .btn-brand {
   background: var(--brand);
-  color: #ffffff;
+  color: var(--brand-foreground);
   border-color: var(--brand);
   font-weight: 600;
 }
 
 .btn-brand:hover:not(:disabled) {
-  background: #059669;
-  border-color: #059669;
+  background: var(--brand-hover);
+  border-color: var(--brand-hover);
 }
 
 /* Secondary / Soft Button */
@@ -689,24 +730,24 @@ svg.lucide,
 .btn-danger {
   background: var(--danger-soft);
   color: var(--danger);
-  border-color: rgba(239, 68, 68, 0.28);
+  border-color: var(--danger-border);
 }
 
 .btn-danger:hover:not(:disabled) {
-  background: var(--danger);
-  color: #ffffff;
-  border-color: var(--danger);
+  background: var(--danger-strong);
+  color: var(--on-danger);
+  border-color: var(--danger-strong);
 }
 
 /* Warning Button */
 .btn-warn {
   background: var(--warn-soft);
   color: var(--warn);
-  border-color: rgba(245, 158, 11, 0.28);
+  border-color: var(--warn-border);
 }
 
 .btn-sm {
-  height: 28px;
+  height: 32px;
   padding: 0 9px;
   font-size: 11.5px;
   border-radius: var(--radius-sm);
@@ -734,13 +775,14 @@ svg.lucide,
   width: 100%;
   background: var(--background);
   color: var(--foreground);
-  border: 1px solid var(--input);
+  border: 1px solid var(--field-edge);
   border-radius: var(--radius-sm);
   padding: 5px 10px;
   font-size: 12.5px;
   font-family: inherit;
-  transition: border-color 0.15s ease, box-shadow 0.15s ease;
-  outline: none;
+  transition: border-color 0.15s ease;
+  outline: 2px solid transparent;
+  outline-offset: -2px;
   box-shadow: var(--shadow-xs);
 }
 
@@ -765,11 +807,10 @@ svg.lucide,
   font-size: 11.5px;
 }
 
-.input:focus,
-.select:focus,
-.textarea:focus {
-  border-color: var(--ring);
-  box-shadow: 0 0 0 2px rgba(161, 161, 170, 0.18);
+.input:focus-visible,
+.select:focus-visible,
+.textarea:focus-visible {
+  outline-color: var(--focus);
 }
 
 .textarea {
@@ -779,7 +820,7 @@ svg.lucide,
 }
 
 .mono {
-  font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 11.5px;
 }
 
@@ -831,7 +872,7 @@ input[type="checkbox"] {
 
 .drawer-grid {
   display: grid;
-  grid-template-columns: 1.05fr 1.45fr;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 1.45fr);
   gap: 10px;
   align-items: stretch;
 }
@@ -872,7 +913,7 @@ input[type="checkbox"] {
 .bulk-panel-badge {
   font-size: 11px;
   font-weight: 500;
-  padding: 2px 8px;
+  padding: 4px 8px;
   border-radius: var(--radius-xs);
   background: var(--brand-soft);
   color: var(--accent-strong);
@@ -899,10 +940,6 @@ input[type="checkbox"] {
   display: flex;
   align-items: center;
   gap: 6px;
-  background: var(--bg-soft);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 3px 8px;
   min-height: 32px;
   overflow: hidden;
 }
@@ -938,7 +975,7 @@ input[type="checkbox"] {
   border: 1px solid var(--border);
   border-radius: var(--radius-xs);
   padding: 1px 5px;
-  font-size: 10.5px;
+  font-size: 11px;
   white-space: nowrap;
   flex-shrink: 0;
 }
@@ -992,10 +1029,14 @@ input[type="checkbox"] {
   font-size: 12px;
 }
 
-.data-table thead th {
+/* One sticky element on screen: the head row of the open view's table, not each cell or hidden view. */
+.view-panel.active .data-table thead {
   position: sticky;
   top: 0;
   z-index: 5;
+}
+
+.data-table thead th {
   background: var(--surface-muted);
   color: var(--muted-foreground);
   font-size: 11.5px;
@@ -1016,11 +1057,11 @@ input[type="checkbox"] {
 }
 
 .data-table tbody tr:hover {
-  background: rgba(161, 161, 170, 0.04);
+  background: var(--row-hover);
 }
 
 .data-table tbody tr.row-selected {
-  background: rgba(16, 185, 129, 0.04);
+  background: var(--row-selected);
 }
 
 .data-table td {
@@ -1078,22 +1119,25 @@ input[type="checkbox"] {
 .cell-prompt-textarea {
   width: 100%;
   min-width: 200px;
-  min-height: 40px;
-  max-height: 84px;
+  /* Whole lines only: two rows of 1.4em plus the 5px top padding and the 2px border, no bottom padding. */
+  height: calc(2.8em + 7px);
+  min-height: calc(2.8em + 7px);
+  max-height: calc(7em + 7px);
   background: var(--bg-soft);
   color: var(--foreground);
-  border: 1px solid var(--border);
+  border: 1px solid var(--field-edge);
   border-radius: var(--radius-xs);
-  padding: 5px 8px;
+  padding: 5px 8px 0;
   font-size: 11.5px;
   line-height: 1.4;
   font-family: inherit;
   resize: vertical;
+  outline: 2px solid transparent;
+  outline-offset: -2px;
 }
 
-.cell-prompt-textarea:focus {
-  border-color: var(--ring);
-  outline: none;
+.cell-prompt-textarea:focus-visible {
+  outline-color: var(--focus);
   background: var(--background);
 }
 
@@ -1126,12 +1170,12 @@ input[type="checkbox"] {
   object-fit: cover;
   border: 1px solid var(--border);
   cursor: pointer;
-  background: #000;
+  background: var(--media-ground);
 }
 
 .stream-badge {
   display: inline-block;
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 500;
   padding: 1px 6px;
   border-radius: 4px;
@@ -1167,26 +1211,26 @@ input[type="checkbox"] {
 
 .badge-running {
   background: var(--info-soft);
-  color: #60a5fa;
-  border-color: rgba(59, 130, 246, 0.25);
+  color: var(--info);
+  border-color: var(--info-border);
 }
 
 .badge-ok {
   background: var(--success-soft);
   color: var(--success);
-  border-color: rgba(16, 185, 129, 0.25);
+  border-color: var(--success-border);
 }
 
 .badge-warn {
   background: var(--warn-soft);
   color: var(--warn);
-  border-color: rgba(245, 158, 11, 0.25);
+  border-color: var(--warn-border);
 }
 
 .badge-fail {
   background: var(--danger-soft);
   color: var(--danger);
-  border-color: rgba(239, 68, 68, 0.25);
+  border-color: var(--danger-border);
 }
 
 .compact-status-wrap {
@@ -1208,7 +1252,6 @@ input[type="checkbox"] {
   height: 100%;
   background: var(--brand);
   border-radius: 999px;
-  transition: width 0.3s ease;
 }
 
 /* ==========================================================================
@@ -1229,7 +1272,7 @@ input[type="checkbox"] {
 
 .chat-layout {
   display: grid;
-  grid-template-columns: 1fr 1.15fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
   gap: 12px;
   flex: 1;
   min-height: 0;
@@ -1314,7 +1357,7 @@ input[type="checkbox"] {
   width: 100%;
   height: 145px;
   object-fit: cover;
-  background: #000;
+  background: var(--media-ground);
 }
 
 .media-meta {
@@ -1338,7 +1381,7 @@ input[type="checkbox"] {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   padding: 12px;
-  font-family: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
+  font-family: var(--font-mono);
   font-size: 11.5px;
   color: var(--foreground);
   overflow: auto;
@@ -1353,8 +1396,7 @@ input[type="checkbox"] {
   position: fixed;
   inset: 0;
   z-index: 9999;
-  background: rgba(0, 0, 0, 0.72);
-  backdrop-filter: blur(4px);
+  background: var(--scrim);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1393,7 +1435,7 @@ input[type="checkbox"] {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: #000;
+  background: var(--media-ground);
 }
 
 .modal-body video,
@@ -1431,8 +1473,8 @@ input[type="checkbox"] {
 }
 
 .toast.error {
-  border-color: rgba(239, 68, 68, 0.45);
-  color: #fca5a5;
+  border-color: var(--danger-border-strong);
+  color: var(--danger-ink-soft);
 }
 
 @keyframes toastSlideIn {
@@ -1457,4 +1499,571 @@ input[type="checkbox"] {
 
 .spin-icon {
   animation: spinAnim 1s linear infinite;
+}
+
+/* Prompt panel: how prompts are entered, the box itself, its live count and the row actions. */
+.seg {
+  display: inline-flex;
+  align-self: flex-start;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: var(--secondary);
+}
+
+.seg input {
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+
+.seg label {
+  display: inline-flex;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 10px;
+  border-radius: var(--radius-xs);
+  font-size: 12px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.seg label:hover {
+  color: var(--foreground);
+}
+
+.seg input:checked + label {
+  background: var(--card);
+  color: var(--foreground);
+  box-shadow: var(--shadow-xs);
+}
+
+.seg input:focus-visible + label {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+/* Whole lines only (line-height 1.45, 5px top padding, 2px border): two rows for one prompt, four for a list. */
+.prompt-input {
+  height: calc(2.9em + 7px);
+  min-height: calc(2.9em + 7px);
+  max-height: calc(5.8em + 7px);
+  padding-bottom: 0;
+  font-size: 12px;
+}
+
+.prompt-input.is-lines {
+  height: calc(5.8em + 7px);
+  max-height: calc(11.6em + 7px);
+}
+
+.prompt-hint {
+  min-height: 1.5em;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.prompt-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.prompt-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.prompt-count .input {
+  width: 56px;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Production screen: compose | queue | preview. Under 1360px the preview moves below the queue. */
+.studio {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(260px, 300px) minmax(0, 1fr) minmax(280px, 360px);
+  grid-template-areas: "compose queue preview";
+  gap: 12px;
+}
+
+.studio:has(> .compose.hidden) {
+  grid-template-columns: minmax(0, 1fr) minmax(280px, 360px);
+  grid-template-areas: "queue preview";
+}
+
+.compose,
+.queue,
+.queue-preview {
+  min-height: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+}
+
+.compose {
+  grid-area: compose;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+
+.compose.hidden {
+  display: none;
+}
+
+.compose-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border-bottom: 1px solid var(--border);
+}
+
+.compose-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.compose-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--foreground);
+}
+
+.compose-note {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.compose .bulk-ref-group,
+.compose .bulk-ref-slot,
+.compose .compose-head {
+  flex-wrap: wrap;
+}
+
+.compose-advanced summary {
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  list-style-position: inside;
+}
+
+.compose-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 8px;
+  padding-top: 8px;
+}
+
+.compose-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  margin-top: auto;
+}
+
+.compose-actions .btn {
+  width: 100%;
+  height: 40px;
+  justify-content: center;
+}
+
+.seg-wide {
+  display: flex;
+  align-self: stretch;
+}
+
+.seg-wide label {
+  flex: 1;
+  justify-content: center;
+}
+
+.seg-wrap {
+  flex-wrap: wrap;
+}
+
+.queue {
+  grid-area: queue;
+  display: flex;
+  flex-direction: column;
+}
+
+.queue-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  flex-wrap: wrap;
+}
+
+.queue-toolbar .input {
+  flex: 1;
+  min-width: 140px;
+}
+
+.queue-toolbar .select {
+  width: auto;
+}
+
+.queue-check-all {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: auto;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.queue-bulk-pills {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  flex-wrap: wrap;
+}
+
+.queue-bulk-pills .btn-sm {
+  height: 28px;
+  padding: 0 8px;
+  font-size: 11px;
+}
+
+.queue-list {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+
+.queue-item {
+  display: grid;
+  grid-template-columns: auto 56px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.queue-row-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.queue-row-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.queue-row-actions .btn-sm {
+  height: 28px;
+  padding: 0 7px;
+  font-size: 11px;
+}
+
+.queue-item:hover {
+  background: var(--row-hover);
+}
+
+.queue-item.is-active {
+  background: var(--row-selected);
+  box-shadow: inset 2px 0 0 var(--brand);
+}
+
+.queue-thumb {
+  width: 56px;
+  height: 56px;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--media-ground);
+  display: grid;
+  place-items: center;
+  color: var(--muted-foreground);
+}
+
+.queue-thumb img,
+.queue-thumb video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.queue-open {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* One line with an ellipsis: hidden extra lines would sit under the meta line. The preview shows the whole prompt. */
+.queue-prompt {
+  display: block;
+  font-size: 12.5px;
+  line-height: 1.4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--foreground);
+}
+
+.queue-meta {
+  display: block;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.queue-empty {
+  padding: 24px 16px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.queue-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px 12px;
+  border-top: 1px solid var(--border);
+}
+
+.queue-footer #btnDeleteSelectedBatch {
+  margin-left: auto;
+}
+
+.queue-preview {
+  grid-area: preview;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px;
+  overflow: auto;
+}
+
+.preview-media {
+  width: 100%;
+  max-height: 46vh;
+  border-radius: var(--radius-sm);
+  background: var(--media-ground);
+  object-fit: contain;
+}
+
+.preview-media-empty {
+  aspect-ratio: 9 / 16;
+  max-height: 32vh;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  text-align: center;
+}
+
+.preview-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 11.5px;
+  color: var(--muted-foreground);
+}
+
+.preview-prompt {
+  min-height: calc(5.8em + 7px);
+  font-size: 12px;
+}
+
+.preview-settings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.preview-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.preview-error {
+  font-size: 12px;
+  color: var(--danger);
+}
+
+@media (max-width: 1360px) {
+  .studio {
+    grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
+    grid-template-rows: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "compose queue"
+      "compose preview";
+  }
+
+  .studio:has(> .compose.hidden) {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "queue"
+      "preview";
+  }
+
+  .queue-preview {
+    max-height: 42vh;
+  }
+}
+
+/* Queue views: grid tiles and a compact table share the list's checkboxes, filters and preview. */
+.queue-toolbar {
+  flex-wrap: wrap;
+}
+
+.queue-list.is-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 8px;
+  padding: 12px;
+  align-content: start;
+}
+
+.queue-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border-radius: var(--radius-md);
+}
+
+.queue-card:hover {
+  background: var(--row-hover);
+}
+
+.queue-card.is-active {
+  background: var(--row-selected);
+  box-shadow: inset 0 0 0 1px var(--brand);
+}
+
+.queue-card > .row-check {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 1;
+}
+
+.queue-card-open {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.queue-card-thumb {
+  display: grid;
+  place-items: center;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--media-ground);
+  color: var(--muted-foreground);
+}
+
+.queue-card-thumb img,
+.queue-card-thumb video {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.queue-table {
+  width: 100%;
+}
+
+.queue-table td {
+  padding: 6px 10px;
+  border-bottom: 1px solid var(--border-subtle);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.queue-table tr.is-active td {
+  background: var(--row-selected);
+}
+
+.queue-table .queue-open {
+  max-width: 240px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+/* Script-hidden elements stay hidden whatever display rule they also match. */
+[hidden] {
+  display: none !important;
+}
+
+/* The DIE counter on the accounts screen (was an inline style). */
+.stat-pill.danger {
+  background: var(--danger-soft);
+  color: var(--danger);
+  border-color: var(--danger-border);
+}
+
+.stat-pill.danger strong {
+  color: var(--danger);
+}
+
+/* One keyboard ring for every control, shown at once (fields draw theirs inset, above). */
+:where(button, a, summary, [role="button"], [tabindex], input[type="checkbox"], input[type="radio"], .nav-item):focus-visible {
+  outline: 2px solid var(--focus);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }

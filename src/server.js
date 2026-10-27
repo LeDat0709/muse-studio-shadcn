@@ -315,7 +315,7 @@ class MuseServer {
       }
     }
 
-    if (req.method === "GET" && (pathname === "/styles.css" || pathname === "/renderer.js")) {
+    if (req.method === "GET" && ["/styles.css", "/renderer.js", "/prompt-lines.js"].includes(pathname)) {
       const filePath = path.join(this.desktopDir, pathname.slice(1));
       if (fs.existsSync(filePath)) {
         const ext = path.extname(filePath).toLowerCase();
@@ -936,7 +936,7 @@ Yêu cầu bắt buộc:
         }
       }
 
-      const runGenerationPayload = async () => {
+      const runGenerationPayload = async (onProgress) => {
         if (mode === "image") {
           const out = await this.engine.generateImage({
             prompt,
@@ -946,6 +946,7 @@ Yêu cầu bắt buộc:
             referenceImages: refList,
             accountId: body.accountId || "",
             rowId: body.rowId || "",
+            onProgress,
           });
           return {
             ok: true,
@@ -981,6 +982,7 @@ Yêu cầu bắt buộc:
           referenceImages: refList,
           accountId: body.accountId || "",
           rowId: body.rowId || "",
+          onProgress,
         });
         return {
           ok: true,
@@ -995,23 +997,52 @@ Yêu cầu bắt buộc:
       };
 
       if (body.async) {
+        const reqRowId = String(body.rowId || "").trim();
+        if (reqRowId) {
+          for (const existingJob of this.asyncJobs.values()) {
+            if (existingJob.status === "running" && existingJob.rowId === reqRowId) {
+              return this._sendJson(res, 200, {
+                ok: true,
+                async: true,
+                deduped: true,
+                jobId: existingJob.jobId,
+              });
+            }
+          }
+        }
+
         const jobId = `job_${crypto.randomBytes(6).toString("hex")}`;
         const jobRecord = {
           jobId,
-          rowId: body.rowId || "",
+          rowId: reqRowId,
           status: "running",
+          progress: 5,
+          progressText: "Đang khởi tạo trên cổng Gateway...",
           createdAt: Date.now(),
           result: null,
           error: null,
         };
         this.asyncJobs.set(jobId, jobRecord);
 
-        runGenerationPayload()
+        runGenerationPayload((pct, text) => {
+          if (jobRecord.status === "cancelled") return;
+          if (typeof pct === "number") jobRecord.progress = pct;
+          if (text) jobRecord.progressText = String(text);
+        })
           .then((resultData) => {
+            if (jobRecord.status === "cancelled") return;
             jobRecord.status = "done";
+            jobRecord.progress = 100;
+            jobRecord.progressText = "Hoàn tất 100%";
             jobRecord.result = resultData;
           })
           .catch((err) => {
+            if (err?.cancelled || jobRecord.status === "cancelled") {
+              jobRecord.status = "cancelled";
+              jobRecord.progressText = "Đã dừng";
+              jobRecord.error = err?.message || "Đã dừng bởi người dùng";
+              return;
+            }
             jobRecord.status = "error";
             jobRecord.error = err.message || "Lỗi tạo video";
           })
@@ -1036,26 +1067,82 @@ Yêu cầu bắt buộc:
       }
     }
 
+    if (pathname === "/admin/generate/cancel" && req.method === "POST") {
+      const body = await this._readJson(req);
+      const all = Boolean(body.all);
+      const jobIds = Array.isArray(body.jobIds)
+        ? body.jobIds.map((x) => String(x || "").trim()).filter(Boolean)
+        : body.jobId
+        ? [String(body.jobId).trim()]
+        : [];
+      const rowIds = Array.isArray(body.rowIds)
+        ? body.rowIds.map((x) => String(x || "").trim()).filter(Boolean)
+        : body.rowId
+        ? [String(body.rowId).trim()]
+        : [];
+      const taskIds = Array.isArray(body.taskIds)
+        ? body.taskIds.map((x) => String(x || "").trim()).filter(Boolean)
+        : body.taskId
+        ? [String(body.taskId).trim()]
+        : [];
+
+      const jobSet = new Set(jobIds);
+      const rowSet = new Set(rowIds);
+      const cancelledJobIds = [];
+
+      for (const [jId, job] of this.asyncJobs.entries()) {
+        if (job.status !== "running") continue;
+        const match = all || jobSet.has(jId) || (job.rowId && rowSet.has(job.rowId));
+        if (!match) continue;
+        job.status = "cancelled";
+        job.progressText = "Đã dừng";
+        job.error = "Đã dừng bởi người dùng";
+        cancelledJobIds.push(jId);
+        if (job.rowId && !rowSet.has(job.rowId)) {
+          rowSet.add(job.rowId);
+        }
+      }
+
+      let engineOut = { cancelledCount: 0, cancelledTaskIds: [], cancelledRowIds: [] };
+      if (typeof this.engine.cancelTasks === "function") {
+        engineOut = await this.engine.cancelTasks({
+          rowIds: Array.from(rowSet),
+          taskIds,
+          all,
+        });
+      }
+
+      return this._sendJson(res, 200, {
+        ok: true,
+        cancelledJobs: cancelledJobIds.length,
+        cancelledTasks: engineOut.cancelledCount,
+        cancelledJobIds,
+        cancelledTaskIds: engineOut.cancelledTaskIds,
+        cancelledRowIds: Array.from(new Set([...rowSet, ...(engineOut.cancelledRowIds || [])])),
+      });
+    }
+
     const genJobMatch = pathname.match(/^\/admin\/generate\/job\/([^/]+)$/);
     if (genJobMatch && req.method === "GET") {
       const job = this.asyncJobs.get(genJobMatch[1]);
       if (!job) {
         return this._sendJson(res, 404, { ok: false, error: "Job not found" });
       }
-      let progress = job.status === "done" ? 100 : 0;
-      let progressText = "";
-      if (job.status === "running" && job.rowId) {
+      let progress = job.status === "done" ? 100 : Number(job.progress || 0);
+      let progressText = String(job.progressText || "");
+      if (job.status === "running" && job.rowId && (!progress || !progressText)) {
         const activeTask = (this.store.listActiveTasks() || []).find(
           (t) => t.row_id === job.rowId
         );
         if (activeTask) {
-          progress = Number(activeTask.progress || 0);
-          progressText = String(activeTask.progress_text || "");
+          progress = progress || Number(activeTask.progress || 0);
+          progressText = progressText || String(activeTask.progress_text || "");
         }
       }
       return this._sendJson(res, 200, {
         ok: true,
         jobId: job.jobId,
+        rowId: job.rowId || "",
         status: job.status,
         progress,
         progress_text: progressText,

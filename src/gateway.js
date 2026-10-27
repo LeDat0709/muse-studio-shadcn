@@ -900,6 +900,8 @@ class MuseGateway {
     this._chunkId = 0;
     this._streamId = 0;
     this._readLock = Promise.resolve();
+    this._transportChunks = new Map();
+    this._streamFrames = new Map();
   }
 
   _persistCookiesIfNeeded() {
@@ -1143,28 +1145,77 @@ class MuseGateway {
     }
   }
 
-  _readTransportFrame(timeoutMs = 30000) {
-    const run = async () => {
-      const chunks = new Map();
-      let total = null;
-      while (true) {
-        const enc = await this.ws.recvBytes(timeoutMs);
-        const raw = this.noise.decrypt(enc);
-        const tf = decodeNoiseTransportFrame(raw);
-        chunks.set(tf.chunk_index, tf.payload);
-        total = tf.total_chunks || 1;
-        if (chunks.size >= total) {
-          const ordered = [];
-          for (let i = 0; i < total; i += 1) {
-            ordered.push(chunks.get(i) || Buffer.alloc(0));
-          }
-          return Buffer.concat(ordered);
-        }
+  async _readTransportFrameUnlocked(timeoutMs = 30000) {
+    while (true) {
+      const enc = await this.ws.recvBytes(timeoutMs);
+      const raw = this.noise.decrypt(enc);
+      const tf = decodeNoiseTransportFrame(raw);
+      const total = tf.total_chunks || 1;
+      if (total <= 1) {
+        return tf.payload;
       }
-    };
+      const cid = tf.chunk_id || 0;
+      let bucket = this._transportChunks.get(cid);
+      if (!bucket) {
+        bucket = new Map();
+        this._transportChunks.set(cid, bucket);
+      }
+      bucket.set(tf.chunk_index, tf.payload);
+      if (bucket.size >= total) {
+        this._transportChunks.delete(cid);
+        const ordered = [];
+        for (let i = 0; i < total; i += 1) {
+          ordered.push(bucket.get(i) || Buffer.alloc(0));
+        }
+        return Buffer.concat(ordered);
+      }
+    }
+  }
+
+  _readTransportFrame(timeoutMs = 30000) {
+    const run = () => this._readTransportFrameUnlocked(timeoutMs);
     const next = this._readLock.then(run, run);
     this._readLock = next.catch(() => {});
     return next;
+  }
+
+  async _readStreamFrame(sid, deadlineMs) {
+    while (true) {
+      const queued = this._streamFrames.get(sid);
+      if (queued && queued.length > 0) {
+        return queued.shift();
+      }
+      const rem = Math.max(500, deadlineMs - Date.now());
+      if (Date.now() >= deadlineMs) {
+        throw new Error(`Gateway stream ${sid} timeout`);
+      }
+      const next = this._readLock.then(
+        async () => {
+          const qNow = this._streamFrames.get(sid);
+          if (qNow && qNow.length > 0) {
+            return qNow.shift();
+          }
+          const raw = await this._readTransportFrameUnlocked(rem);
+          const sf = decodeServiceResponseFrame(raw);
+          if (sf.stream_id === sid) {
+            return sf;
+          }
+          if (sf.stream_id > 0) {
+            let q = this._streamFrames.get(sf.stream_id);
+            if (!q) {
+              q = [];
+              this._streamFrames.set(sf.stream_id, q);
+            }
+            q.push(sf);
+          }
+          return null;
+        },
+        () => null
+      );
+      this._readLock = next.catch(() => {});
+      const matched = await next;
+      if (matched) return matched;
+    }
   }
 
   _openStream(verb, reqPath, { service = 0, body = null, headers = {} } = {}) {
@@ -1238,27 +1289,28 @@ class MuseGateway {
     const chunks = [];
     const deadline = Date.now() + timeoutMs;
 
-    while (true) {
-      const rem = Math.max(1000, deadline - Date.now());
-      const raw = await this._readTransportFrame(rem);
-      const sf = decodeServiceResponseFrame(raw);
-      if (sf.stream_id !== sid) continue;
+    try {
+      while (true) {
+        const sf = await this._readStreamFrame(sid, deadline);
 
-      if (sf.kind === "response" && sf.response) {
-        status = sf.response.status;
-        respHeaders = sf.response.headers || [];
-        if (sf.response.body && sf.response.body.length > 0) {
-          chunks.push(sf.response.body);
+        if (sf.kind === "response" && sf.response) {
+          status = sf.response.status;
+          respHeaders = sf.response.headers || [];
+          if (sf.response.body && sf.response.body.length > 0) {
+            chunks.push(sf.response.body);
+          }
+          if (sf.response.end_body) break;
+        } else if (sf.kind === "body_chunk" && sf.body_chunk) {
+          if (sf.body_chunk.data && sf.body_chunk.data.length > 0) {
+            chunks.push(sf.body_chunk.data);
+          }
+          if (sf.body_chunk.end_body) break;
+        } else if (sf.kind === "reset" && sf.reset) {
+          throw new Error(`Stream reset (${sf.reset.code}): ${sf.reset.reason}`);
         }
-        if (sf.response.end_body) break;
-      } else if (sf.kind === "body_chunk" && sf.body_chunk) {
-        if (sf.body_chunk.data && sf.body_chunk.data.length > 0) {
-          chunks.push(sf.body_chunk.data);
-        }
-        if (sf.body_chunk.end_body) break;
-      } else if (sf.kind === "reset" && sf.reset) {
-        throw new Error(`Stream reset (${sf.reset.code}): ${sf.reset.reason}`);
       }
+    } finally {
+      this._streamFrames.delete(sid);
     }
 
     return {
@@ -1299,50 +1351,51 @@ class MuseGateway {
     let buf = "";
     const deadline = Date.now() + timeoutMs;
 
-    while (Date.now() < deadline) {
-      let raw;
-      try {
-        const rem = Math.max(500, deadline - Date.now());
-        raw = await this._readTransportFrame(rem);
-      } catch (_err) {
-        break;
-      }
-      const sf = decodeServiceResponseFrame(raw);
-      if (sf.stream_id !== sid) continue;
-
-      let chunk = Buffer.alloc(0);
-      let done = false;
-      if (sf.kind === "response" && sf.response) {
-        if (sf.response.status >= 400) {
-          throw new Error(
-            `${methodName} -> HTTP ${sf.response.status}: ${sf.response.body.toString("utf8")}`
-          );
+    try {
+      while (Date.now() < deadline) {
+        let sf;
+        try {
+          sf = await this._readStreamFrame(sid, deadline);
+        } catch (_err) {
+          break;
         }
-        chunk = sf.response.body || Buffer.alloc(0);
-        done = Boolean(sf.response.end_body);
-      } else if (sf.kind === "body_chunk" && sf.body_chunk) {
-        chunk = sf.body_chunk.data || Buffer.alloc(0);
-        done = Boolean(sf.body_chunk.end_body);
-      } else if (sf.kind === "reset") {
-        break;
-      }
 
-      buf += chunk.toString("utf8");
-      while (buf.includes("\n")) {
-        const nl = buf.indexOf("\n");
-        const line = buf.slice(0, nl).trim();
-        buf = buf.slice(nl + 1);
-        if (line) {
-          try {
-            const parsed = JSON.parse(line);
-            events.push(parsed);
-            if (typeof onEvent === "function") onEvent(parsed);
-          } catch (_e) {
-            events.push({ raw: line });
+        let chunk = Buffer.alloc(0);
+        let done = false;
+        if (sf.kind === "response" && sf.response) {
+          if (sf.response.status >= 400) {
+            throw new Error(
+              `${methodName} -> HTTP ${sf.response.status}: ${sf.response.body.toString("utf8")}`
+            );
+          }
+          chunk = sf.response.body || Buffer.alloc(0);
+          done = Boolean(sf.response.end_body);
+        } else if (sf.kind === "body_chunk" && sf.body_chunk) {
+          chunk = sf.body_chunk.data || Buffer.alloc(0);
+          done = Boolean(sf.body_chunk.end_body);
+        } else if (sf.kind === "reset") {
+          break;
+        }
+
+        buf += chunk.toString("utf8");
+        while (buf.includes("\n")) {
+          const nl = buf.indexOf("\n");
+          const line = buf.slice(0, nl).trim();
+          buf = buf.slice(nl + 1);
+          if (line) {
+            try {
+              const parsed = JSON.parse(line);
+              events.push(parsed);
+              if (typeof onEvent === "function") onEvent(parsed);
+            } catch (_e) {
+              events.push({ raw: line });
+            }
           }
         }
+        if (done) break;
       }
-      if (done) break;
+    } finally {
+      this._streamFrames.delete(sid);
     }
     return events;
   }
@@ -1351,31 +1404,39 @@ class MuseGateway {
    * Starts a fresh chat thread/session on the VM and returns its session_id
    */
   async startSession(title = "") {
-    try {
-      const params = {
-        origin: "fresh",
-        lifecycle: "persistent",
-      };
-      if (title) params.title = String(title).slice(0, 80);
-      const res = await this.call("session.start", {
-        body: {
-          method: "/api/session/start",
-          params,
-        },
-        timeoutMs: 20000,
-      });
-      return (
-        res?.result?.session_id ||
-        res?.session_id ||
-        res?.result?.id ||
-        res?.id ||
-        res?.result?.session?.session_id ||
-        res?.session?.session_id ||
-        ""
-      );
-    } catch (_err) {
-      return "";
+    const cleanTitle = String(title || "New Session").slice(0, 80);
+    const params = {
+      origin: "fresh",
+      lifecycle: "persistent",
+      title: cleanTitle,
+    };
+    const extractId = (res) =>
+      res?.result?.session_id ||
+      res?.session_id ||
+      res?.result?.id ||
+      res?.id ||
+      res?.result?.session?.session_id ||
+      res?.session?.session_id ||
+      res?.result?.session?.id ||
+      res?.session?.id ||
+      "";
+
+    for (const bodyCandidate of [
+      { method: "/api/session/start", params },
+      params,
+    ]) {
+      try {
+        const res = await this.call("session.start", {
+          body: bodyCandidate,
+          timeoutMs: 20000,
+        });
+        const sid = extractId(res);
+        if (sid) return String(sid);
+      } catch (_err) {
+        // try next body shape
+      }
     }
+    return "";
   }
 
   /**
@@ -1488,23 +1549,44 @@ class MuseGateway {
   }
 
   /**
+   * Cancels an active chat stream/turn on the Muse VM
+   */
+  async cancelChat({ sessionId = "" } = {}) {
+    try {
+      const body = {};
+      if (sessionId) body.session_id = sessionId;
+      await this.call("chat.cancel", { body, timeoutMs: 5000 }).catch(() => null);
+      return true;
+    } catch (_err) {
+      return false;
+    }
+  }
+
+  /**
    * Sends a message to the Muse VM via chat.stream
    */
   async sendChatMessage(text, { sessionId = "", attachments = [] } = {}) {
+    const clientMessageId = crypto.randomUUID();
+    const submissionId = crypto.randomUUID();
     const body = {
       message: String(text || ""),
-      client_message_id: crypto.randomUUID(),
-      submission_id: crypto.randomUUID(),
+      client_message_id: clientMessageId,
+      submission_id: submissionId,
       attachments: Array.isArray(attachments) ? attachments : [],
       mentions: [],
     };
     if (sessionId) {
       body.session_id = sessionId;
     }
-    return this.callStream("chat.stream", {
+    const events = await this.callStream("chat.stream", {
       body,
       timeoutMs: 25000,
     });
+    return {
+      clientMessageId,
+      submissionId,
+      events,
+    };
   }
 
   /**
@@ -1523,20 +1605,33 @@ class MuseGateway {
       res?.result?.events ||
       res?.events ||
       [];
-    return Array.isArray(list) ? list : [];
+    if (!Array.isArray(list)) return [];
+    if (!sessionId) return list;
+    return list.filter((ev) => {
+      const evSid =
+        ev?.session_id ||
+        ev?.thread_id ||
+        ev?.payload?.session_id ||
+        ev?.payload?.thread_id ||
+        "";
+      return !evSid || String(evSid) === String(sessionId);
+    });
   }
 
   /**
    * Lists workspace files or searches for generated media files on the VM
    */
-  async listGeneratedFiles() {
+  async listGeneratedFiles(extraDirs = []) {
     const results = [];
-    for (const dirPath of [
+    const seenPaths = new Set();
+    const dirs = [
+      ...extraDirs.filter(Boolean),
       "workspace/imagine_media",
       "workspace",
       "workspace/industrial_video_20s",
       "workspace/industrial_product_video_20s",
-    ]) {
+    ];
+    for (const dirPath of dirs) {
       try {
         const listRes = await this.call("fs.list", {
           body: { path: dirPath },
@@ -1554,12 +1649,28 @@ class MuseGateway {
         for (const entry of entries) {
           if (entry?.type === "directory") continue;
           const name = typeof entry === "string" ? entry : entry?.name || entry?.path || "";
-          if (!name || /^(?:ref_|reference_)/i.test(name)) continue;
+          if (!name || /^(?:ref_|reference_)/i.test(path.posix.basename(name))) continue;
           const full = name.startsWith(dirPath + "/") ? name : `${dirPath}/${name}`;
+          if (seenPaths.has(full)) continue;
           if (/\.(mp4|webm|mov|png|jpe?g|webp)$/i.test(full)) {
-            const mtimeMs = entry?.modifiedAt ? Date.parse(entry.modifiedAt) || 0 : 0;
+            seenPaths.add(full);
+            const rawMtime =
+              entry?.modifiedAt ??
+              entry?.mtime ??
+              entry?.mtime_ms ??
+              entry?.modified_at ??
+              0;
+            const mtimeMs =
+              typeof rawMtime === "number"
+                ? rawMtime > 1e12
+                  ? rawMtime
+                  : rawMtime * 1000
+                : rawMtime
+                ? Date.parse(String(rawMtime)) || 0
+                : 0;
             results.push({
               source: "fs",
+              name: path.posix.basename(full),
               path: full,
               size: Number(entry?.size || 0),
               mtimeMs,
@@ -1693,6 +1804,20 @@ function inspectHistoryEvent(ev) {
       ""
   ).trim();
   const replyTo = String(ev?.reply_to_message_id ?? payload.reply_to_message_id ?? "");
+  const clientMessageId = String(
+    ev?.client_message_id ??
+      payload.client_message_id ??
+      ev?.submission_id ??
+      payload.submission_id ??
+      ""
+  );
+  const sessionId = String(
+    ev?.session_id ??
+      ev?.thread_id ??
+      payload.session_id ??
+      payload.thread_id ??
+      ""
+  );
   const messageKind = String(payload?.metadata?.message_kind || "");
   const status = String(payload?.status || ev?.status || "");
   const mediaRefs = [];
@@ -1786,6 +1911,8 @@ function inspectHistoryEvent(ev) {
 
   return {
     messageId: ev?.message_id || "",
+    clientMessageId,
+    sessionId,
     eventName: ev?.event_name || "",
     occurredAtMs: Number(ev?.occurred_at_ms || 0),
     messageKind,

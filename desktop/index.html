@@ -3,9 +3,10 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Muse AI Studio — Node.js &amp; shadcn/ui</title>
-    <link rel="icon" href="/assets/icon.ico" />
-    <link rel="stylesheet" href="/styles.css" />
+    <title>Muse AI Studio (Node.js, shadcn/ui)</title>
+    <meta name="description" content="Muse AI Studio: queue and run batches of Muse.ai video and image renders, manage accounts and serve an OpenAI-compatible API on this machine." />
+    <link rel="icon" href="assets/icon.ico" />
+    <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <div class="app-shell">
@@ -13,14 +14,14 @@
       <aside class="sidebar">
         <div class="brand-card">
           <div class="brand-logo-box">
-            <svg class="lucide" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 4"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+            <svg aria-hidden="true" class="lucide" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 4"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
           </div>
           <div class="brand-meta">
             <div class="brand-title-row">
               <span class="brand-title">Muse AI Studio</span>
               <span class="brand-badge">v2.0</span>
             </div>
-            <div class="brand-subtitle">HTTP · Noise-XX · shadcn/ui</div>
+            <div class="brand-subtitle">HTTP, Noise-XX, shadcn/ui</div>
           </div>
         </div>
 
@@ -29,7 +30,7 @@
           <button class="nav-item active" data-view="batch">
             <span class="nav-item-left">
               <span class="nav-icon">
-                <svg class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
+                <svg aria-hidden="true" class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>
               </span>
               <span>Sản xuất hàng loạt</span>
             </span>
@@ -39,7 +40,7 @@
           <button class="nav-item" data-view="accounts">
             <span class="nav-item-left">
               <span class="nav-icon">
-                <svg class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                <svg aria-hidden="true" class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
               </span>
               <span>Tài khoản Muse.ai</span>
             </span>
@@ -49,7 +50,7 @@
           <button class="nav-item" data-view="chat">
             <span class="nav-item-left">
               <span class="nav-icon">
-                <svg class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                <svg aria-hidden="true" class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
               </span>
               <span>Chat &amp; Kịch bản AI</span>
             </span>
@@ -58,7 +59,7 @@
           <button class="nav-item" data-view="media">
             <span class="nav-item-left">
               <span class="nav-icon">
-                <svg class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                <svg aria-hidden="true" class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
               </span>
               <span>Thư viện Media</span>
             </span>
@@ -70,7 +71,7 @@
           <button class="nav-item" data-view="tasks">
             <span class="nav-item-left">
               <span class="nav-icon">
-                <svg class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+                <svg aria-hidden="true" class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
               </span>
               <span>Nhật ký &amp; Tiến trình</span>
             </span>
@@ -80,7 +81,7 @@
           <button class="nav-item" data-view="api">
             <span class="nav-item-left">
               <span class="nav-icon">
-                <svg class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg aria-hidden="true" class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
               </span>
               <span>Cổng API (/v1) &amp; Cài đặt</span>
             </span>
@@ -89,7 +90,7 @@
 
         <div class="sidebar-card">
           <div class="sidebar-card-title">
-            <svg class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
+            <svg aria-hidden="true" class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
             <span>Trạng thái Engine</span>
           </div>
           <div class="sidebar-stat-row">
@@ -109,7 +110,7 @@
           <div class="sidebar-card-title" style="margin-top: 4px">OpenAI Base URL</div>
           <div class="endpoint-box" id="copyEndpointBox" title="Bấm để sao chép Base URL">
             <span id="sideBaseUrlText">http://127.0.0.1:18638/v1</span>
-            <svg class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--muted-foreground)"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color: var(--muted-foreground)"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
           </div>
         </div>
 
@@ -124,7 +125,7 @@
           </div>
           <button class="theme-btn" id="themeToggleBtn">
             <span id="themeIcon" style="display: inline-flex; align-items: center">
-              <svg class="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
+              <svg aria-hidden="true" class="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/></svg>
             </span>
             <span id="themeLabel">Giao diện Sáng</span>
           </button>
@@ -139,7 +140,7 @@
             <div class="topbar-left">
               <div class="view-title">
                 <span class="view-title-icon">
-                  <svg class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 4"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
+                  <svg aria-hidden="true" class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 4"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
                 </span>
                 <span>Sản xuất Video &amp; Ảnh hàng loạt</span>
               </div>
@@ -152,118 +153,129 @@
             </div>
             <div class="topbar-actions">
               <button class="btn btn-soft btn-sm" id="btnToggleBulkDrawer">
-                <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>
+                <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>
                 <span>Thiết lập</span>
               </button>
               <button class="btn btn-soft btn-sm" id="btnQuickAiPrompts">
-                <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
                 <span>Kịch bản AI</span>
               </button>
               <button class="btn btn-soft btn-sm" id="btnUploadBulkProductTop" title="Chọn hoặc kéo thả nhiều ảnh sản phẩm — Mỗi sản phẩm tự động tạo 1 Luồng">
-                <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16h6"/><path d="M19 13v6"/><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"/><path d="m7.5 4.27 9 5.15"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" x2="12" y1="22" y2="12"/></svg>
+                <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16h6"/><path d="M19 13v6"/><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"/><path d="m7.5 4.27 9 5.15"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" x2="12" y1="22" y2="12"/></svg>
                 <span>Thêm SP tạo Luồng</span>
               </button>
-              <button class="btn btn-primary btn-sm" id="btnRunSelectedBatch" style="padding: 0 12px">
-                <svg class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>
-                <span>Chạy hàng loạt</span>
-              </button>
-              <button class="btn btn-sm" id="btnDownloadSelectedBatch">
-                <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-                <span>Xuất Media</span>
-              </button>
               <button class="btn btn-sm" id="btnOpenMediaFolder">
-                <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>
+                <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>
                 <span>Thư mục</span>
-              </button>
-              <button class="btn btn-danger btn-sm" id="btnDeleteSelectedBatch" title="Xóa các luồng đã chọn">
-                <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" x2="10" y1="11" y2="17"/><line x1="14" x2="14" y1="11" y2="17"/></svg>
-                <span>Xóa chọn</span>
               </button>
             </div>
           </div>
 
-          <!-- Collapsible Bulk Setup Drawer (shadcn/ui Cards) -->
-          <div class="drawer" id="bulkSetupDrawer">
-            <div class="drawer-grid">
-              <div class="bulk-prompt-panel">
-                <div class="bulk-panel-header">
-                  <span class="bulk-panel-title">
-                    <svg class="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/><line x1="16" x2="8" y1="13" y2="13"/><line x1="16" x2="8" y1="17" y2="17"/><line x1="10" x2="8" y1="9" y2="9"/></svg>
-                    <span>Prompt Cố Định (Tự động lưu &amp; áp dụng cho các Luồng)</span>
-                  </span>
-                  <button class="btn btn-sm" id="btnResetDefaultPrompts" type="button" style="height: 24px; padding: 0 8px; font-size: 11px">
-                    <svg class="lucide" width="11.5" height="11.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+          <div class="studio">
+            <!-- Compose: what to make. Toggled by "Thiết lập". -->
+            <aside class="compose" id="bulkSetupDrawer" aria-label="Soạn luồng">
+              <div class="compose-section">
+                <div class="seg seg-wide" role="radiogroup" aria-label="Loại media">
+                  <input type="radio" name="bulkModeTab" id="bulkModeTabVideo" value="video" checked />
+                  <label for="bulkModeTabVideo">Tạo video</label>
+                  <input type="radio" name="bulkModeTab" id="bulkModeTabImage" value="image" />
+                  <label for="bulkModeTabImage">Tạo ảnh</label>
+                </div>
+                <select id="bulkModeSelect" class="select" hidden>
+                      <option value="video" selected>Tạo Video AI</option>
+                      <option value="image">Tạo Ảnh AI</option>
+                    </select>
+              </div>
+
+              <div class="compose-section">
+                <div class="compose-head">
+                  <span class="compose-title">Prompt</span>
+                  <button class="btn btn-sm" id="btnResetDefaultPrompts" type="button" style="padding: 0 8px; font-size: 11px">
+                    <svg aria-hidden="true" class="lucide" width="11.5" height="11.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                     <span>Mẫu mặc định</span>
                   </button>
                 </div>
-
+                <div class="seg seg-wide" role="radiogroup" aria-label="Cách nhập prompt">
+                  <input type="radio" name="promptMode" id="promptModeSingle" value="single" checked />
+                  <label for="promptModeSingle">Prompt chung</label>
+                  <input type="radio" name="promptMode" id="promptModeLines" value="lines" />
+                  <label for="promptModeLines">Mỗi dòng 1 prompt</label>
+                </div>
                 <textarea
                   id="bulkVideoPromptsInput"
-                  class="textarea"
+                  class="textarea prompt-input"
                   rows="2"
                   spellcheck="false"
-                  style="min-height: 48px; max-height: 68px; font-size: 12px"
-                  placeholder="Nhập Prompt tạo Video / Ảnh cố định..."
+                  aria-describedby="promptHint"
+                  placeholder="Nhập prompt dùng chung cho mọi luồng…"
                 ></textarea>
-
-                <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px; flex-wrap: wrap">
-                  <div style="display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap">
-                    <span style="font-size: 11.5px; color: var(--muted-foreground); font-weight: 500">Số luồng:</span>
-                    <input
-                      type="number"
-                      id="promptStreamCountInput"
-                      class="input"
-                      min="1"
-                      max="20"
-                      value="3"
-                      style="width: 52px; height: 28px; padding: 2px 6px; text-align: center; font-weight: 600"
-                    />
-                    <button class="btn btn-primary btn-sm" id="btnCreateStreamsFromPrompt" type="button">
-                      <svg class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                      <span>Tạo Luồng từ Prompt</span>
-                    </button>
-                    <button class="btn btn-soft btn-sm" id="btnAddOneStream" type="button">
-                      <svg class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
-                      <span>Thêm 1 Luồng</span>
-                    </button>
-                  </div>
-                  <button class="btn btn-soft btn-sm" id="btnPromptUploadProducts" type="button">
-                    <svg class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-                    <span>Kéo thả / Chọn SP</span>
+                <p class="prompt-hint" id="promptHint" aria-live="polite">Áp dụng cho mọi luồng chưa chạy, tự lưu khi gõ.</p>
+                <div class="prompt-actions">
+                  <label class="prompt-count" id="promptStreamCountWrap">
+                    <span>Số luồng</span>
+                    <input type="number" id="promptStreamCountInput" class="input" min="1" max="20" value="3" />
+                  </label>
+                  <label class="prompt-count" id="promptRepeatWrap" hidden>
+                    <span>Lặp mỗi prompt</span>
+                    <input type="number" id="promptRepeatInput" class="input" min="1" max="10" value="1" />
+                  </label>
+                  <button class="btn btn-soft btn-sm" id="btnAddOneStream" type="button">
+                    <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+                    <span>Thêm 1 luồng</span>
                   </button>
                 </div>
               </div>
 
-              <div class="bulk-config-panel" id="productDropZone">
-                <div class="bulk-panel-header">
-                  <span class="bulk-panel-title">
-                    <svg class="lucide" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 9.4 7.55 4.24"/><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" x2="12" y1="22" y2="12"/></svg>
-                    <span>Thiết lập thông số &amp; Tham chiếu (1 Sản phẩm = 1 Luồng)</span>
-                  </span>
+              <div class="compose-section" id="productDropZone">
+                <div class="compose-head">
+                  <span class="compose-title">Ảnh tham chiếu</span>
                   <span class="bulk-panel-badge" id="bulkProductCountBadge">0 SP (0 luồng) · &gt;10s tự ghép</span>
                 </div>
+                <p class="compose-note">Kéo thả ảnh sản phẩm vào đây, mỗi sản phẩm thành một luồng.</p>
+                <div class="bulk-ref-group">
+                      <div class="bulk-ref-slot">
+                        <button class="btn btn-soft btn-sm" id="btnUploadBulkCharacter" type="button" style="padding: 0 8px">
+                          <svg aria-hidden="true" class="lucide" width="12.5" height="12.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
+                          <span>Nhân vật</span>
+                        </button>
+                        <div id="bulkCharacterPreviewBox" style="display: none; align-items: center; gap: 4px">
+                          <img id="bulkCharacterThumb" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="Ảnh nhân vật" class="ref-thumb" style="width: 22px; height: 22px" />
+                          <span id="bulkCharacterName" style="font-size: 11px; color: var(--accent-strong); max-width: 65px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap"></span>
+                          <button class="btn btn-danger btn-sm" id="btnClearBulkCharacter" type="button" style="padding: 0 5px">×</button>
+                        </div>
+                      </div>
 
-                <div class="bulk-grid-top">
-                  <div>
-                    <label class="field-label">Loại Media</label>
-                    <select id="bulkModeSelect" class="select">
-                      <option value="video" selected>Tạo Video AI</option>
-                      <option value="image">Tạo Ảnh AI</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="field-label">Tỉ lệ khung</label>
-                    <select id="bulkAspectSelect" class="select">
+                      <span class="bulk-ref-divider"></span>
+
+                      <div class="bulk-ref-slot" style="flex: 1; min-width: 0">
+                        <button class="btn btn-brand btn-sm" id="btnUploadBulkProduct" type="button" style="padding: 0 9px">
+                          <svg aria-hidden="true" class="lucide" width="12.5" height="12.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16h6"/><path d="M19 13v6"/><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"/><path d="m7.5 4.27 9 5.15"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" x2="12" y1="22" y2="12"/></svg>
+                          <span>Chọn nhiều SP</span>
+                        </button>
+                        <div id="bulkProductListBox" class="product-chips-list"></div>
+                        <button class="btn btn-danger btn-sm" id="btnClearBulkProduct" type="button" style="display: none; padding: 0 6px">
+                          Xóa hết
+                        </button>
+                      </div>
+                    </div>
+              </div>
+
+              <div class="compose-section">
+                <span class="compose-title" id="bulkAspectLabel">Tỉ lệ khung</span>
+                <div class="seg seg-wrap" role="radiogroup" aria-labelledby="bulkAspectLabel"><input type="radio" name="bulkAspectTab" id="bulkAspectTab0" value="9:16" checked /><label for="bulkAspectTab0">9:16</label><input type="radio" name="bulkAspectTab" id="bulkAspectTab1" value="16:9" /><label for="bulkAspectTab1">16:9</label><input type="radio" name="bulkAspectTab" id="bulkAspectTab2" value="1:1" /><label for="bulkAspectTab2">1:1</label><input type="radio" name="bulkAspectTab" id="bulkAspectTab3" value="4:3" /><label for="bulkAspectTab3">4:3</label><input type="radio" name="bulkAspectTab" id="bulkAspectTab4" value="3:4" /><label for="bulkAspectTab4">3:4</label></div>
+                <select id="bulkAspectSelect" class="select" hidden>
                       <option value="9:16">9:16 (Dọc)</option>
                       <option value="16:9">16:9 (Ngang)</option>
                       <option value="1:1">1:1 (Vuông)</option>
                       <option value="4:3">4:3</option>
                       <option value="3:4">3:4</option>
                     </select>
-                  </div>
-                  <div>
-                    <label class="field-label">Thời lượng Video</label>
-                    <select id="bulkDurationSelect" class="select">
+              </div>
+
+              <details class="compose-section compose-advanced">
+                <summary>Nâng cao: thời lượng, độ phân giải, số luồng, tài khoản</summary>
+                <div class="compose-grid">
+                  <div><label class="field-label" for="bulkDurationSelect">Thời lượng video</label><select id="bulkDurationSelect" class="select">
                       <option value="5s">5 giây (Đơn)</option>
                       <option value="6s">6 giây (Đơn)</option>
                       <option value="8s">8 giây (Đơn)</option>
@@ -274,19 +286,13 @@
                       <option value="40s">40s (Tự ghép)</option>
                       <option value="50s">50s (Tự ghép)</option>
                       <option value="60s">60s (Tự ghép)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="field-label">Độ phân giải</label>
-                    <select id="bulkQualitySelect" class="select">
+                    </select></div>
+                  <div><label class="field-label" for="bulkQualitySelect">Độ phân giải</label><select id="bulkQualitySelect" class="select">
                       <option value="1K">1K (1080p)</option>
                       <option value="2K">2K (1440p)</option>
                       <option value="4K" selected>4K (Ultra HD)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <label class="field-label">Số luồng song song</label>
-                    <select id="bulkConcurrencySelect" class="select">
+                    </select></div>
+                  <div><label class="field-label" for="bulkConcurrencySelect">Số luồng song song</label><select id="bulkConcurrencySelect" class="select">
                       <option value="1">1 luồng</option>
                       <option value="2" selected>2 luồng</option>
                       <option value="3">3 luồng</option>
@@ -294,82 +300,97 @@
                       <option value="5">5 luồng</option>
                       <option value="6">6 luồng</option>
                       <option value="8">8 luồng</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div class="bulk-grid-bottom">
-                  <div>
-                    <label class="field-label">Tài khoản Muse.ai</label>
-                    <select id="bulkAccountSelect" class="select">
+                    </select></div>
+                  <div><label class="field-label" for="bulkAccountSelect">Tài khoản Muse.ai</label><select id="bulkAccountSelect" class="select">
                       <option value="">Xoay vòng ních LIVE</option>
-                    </select>
-                  </div>
+                    </select></div>
+                </div>
+              </details>
 
-                  <div>
-                    <label class="field-label">Ảnh Nhân vật cố định &amp; Danh sách Sản phẩm (Kéo thả vào bảng)</label>
-                    <div class="bulk-ref-group">
-                      <div class="bulk-ref-slot">
-                        <button class="btn btn-soft btn-sm" id="btnUploadBulkCharacter" type="button" style="height: 24px; padding: 0 8px">
-                          <svg class="lucide" width="12.5" height="12.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
-                          <span>Nhân vật</span>
-                        </button>
-                        <div id="bulkCharacterPreviewBox" style="display: none; align-items: center; gap: 4px">
-                          <img id="bulkCharacterThumb" src="" class="ref-thumb" style="width: 22px; height: 22px" />
-                          <span id="bulkCharacterName" style="font-size: 11px; color: var(--accent-strong); max-width: 65px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap"></span>
-                          <button class="btn btn-danger btn-sm" id="btnClearBulkCharacter" type="button" style="height: 20px; padding: 0 5px">×</button>
-                        </div>
-                      </div>
+              <div class="compose-actions">
+                <button class="btn btn-primary" id="btnLoadAndRunBulk" type="button">
+                  <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+                  <span>Tạo và chạy</span>
+                </button>
+                <button class="btn btn-soft" id="btnCreateStreamsFromPrompt" type="button">
+                  <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                  <span id="btnCreateStreamsLabel">Chỉ thêm vào hàng đợi</span>
+                </button>
+              </div>
+            </aside>
 
-                      <span class="bulk-ref-divider"></span>
-
-                      <div class="bulk-ref-slot" style="flex: 1; min-width: 0">
-                        <button class="btn btn-brand btn-sm" id="btnUploadBulkProduct" type="button" style="height: 24px; padding: 0 9px">
-                          <svg class="lucide" width="12.5" height="12.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16h6"/><path d="M19 13v6"/><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"/><path d="m7.5 4.27 9 5.15"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" x2="12" y1="22" y2="12"/></svg>
-                          <span>Chọn nhiều SP</span>
-                        </button>
-                        <div id="bulkProductListBox" class="product-chips-list"></div>
-                        <button class="btn btn-danger btn-sm" id="btnClearBulkProduct" type="button" style="display: none; height: 22px; padding: 0 6px">
-                          Xóa hết
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div>
-                    <button class="btn btn-primary" id="btnLoadAndRunBulk" type="button">
-                      <svg class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>
-                      <span>Chạy ngay</span>
-                    </button>
-                  </div>
+            <!-- Queue: every stream, searchable, with bulk actions. -->
+            <section class="queue" aria-label="Hàng đợi">
+              <div class="queue-toolbar">
+                <input type="search" id="queueSearch" class="input" placeholder="Tìm prompt…" aria-label="Tìm prompt" />
+                <select id="queueStatusFilter" class="select" aria-label="Lọc theo trạng thái">
+                  <option value="all">Mọi trạng thái</option>
+                  <option value="idle">Chờ chạy</option>
+                  <option value="running">Đang chạy</option>
+                  <option value="done">Hoàn tất</option>
+                  <option value="error">Lỗi</option>
+                </select>
+                <div class="seg" role="radiogroup" aria-label="Kiểu xem hàng đợi">
+                  <input type="radio" name="queueView" id="queueViewList" value="list" checked />
+                  <label for="queueViewList">Danh sách</label>
+                  <input type="radio" name="queueView" id="queueViewGrid" value="grid" />
+                  <label for="queueViewGrid">Lưới</label>
+                  <input type="radio" name="queueView" id="queueViewTable" value="table" />
+                  <label for="queueViewTable">Bảng</label>
+                </div>
+                <button class="btn btn-brand btn-sm" id="btnQueueAddRow" type="button" title="Thêm nhanh 1 luồng prompt mới vào hàng đợi">
+                  <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                  <span>Thêm luồng</span>
+                </button>
+              </div>
+              <div class="queue-toolbar queue-toolbar-bulk">
+                <label class="queue-check-all" title="Chọn / Bỏ chọn tất cả luồng đang hiển thị">
+                  <input type="checkbox" id="selectAllBatch" checked />
+                  <span id="queueCount">0 luồng</span>
+                </label>
+                <div class="queue-bulk-pills">
+                  <button class="btn btn-sm" id="btnSelectAllRows" type="button" title="Chọn toàn bộ luồng">Tất cả</button>
+                  <button class="btn btn-sm" id="btnUnselectAll" type="button" title="Bỏ chọn toàn bộ luồng">Bỏ chọn</button>
+                  <button class="btn btn-sm" id="btnSelectRunning" type="button" title="Chọn các luồng đang chạy">Đang chạy</button>
+                  <button class="btn btn-sm" id="btnSelectPending" type="button" title="Chọn các luồng chưa chạy">Chưa chạy</button>
+                  <button class="btn btn-sm" id="btnSelectErrored" type="button" title="Chọn các luồng bị lỗi">Lỗi</button>
+                  <button class="btn btn-soft btn-sm" id="btnBulkApplyPrompt" type="button" title="Ghi đè Prompt & Cấu hình cột trái vào tất cả các luồng đang tích chọn">
+                    <svg aria-hidden="true" class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                    <span>Sửa hàng loạt</span>
+                  </button>
                 </div>
               </div>
-            </div>
-          </div>
+              <div class="queue-list" id="batchTableBody" role="list"></div>
+              <div class="queue-footer">
+                <button class="btn btn-primary btn-sm" id="btnRunSelectedBatch" type="button" title="Chạy các luồng đã chọn">
+                  <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+                  <span>Chạy</span>
+                </button>
+                <button class="btn btn-warn btn-sm" id="btnStopSelectedBatch" type="button" title="Dừng các luồng đang chạy đã tích chọn">
+                  <svg aria-hidden="true" class="lucide" width="12.5" height="12.5" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+                  <span>Dừng đã chọn</span>
+                </button>
+                <button class="btn btn-danger btn-sm" id="btnStopAllBatch" type="button" title="Dừng ngay lập tức tất cả các luồng đang chạy">
+                  <svg aria-hidden="true" class="lucide" width="12.5" height="12.5" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
+                  <span>Dừng tất cả</span>
+                </button>
+                <button class="btn btn-sm" id="btnRetryErrored" type="button">
+                  <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                  <span>Chạy lại lỗi</span>
+                </button>
+                <button class="btn btn-sm" id="btnDownloadSelectedBatch" type="button">
+                  <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                  <span>Xuất media</span>
+                </button>
+                <button class="btn btn-danger btn-sm" id="btnDeleteSelectedBatch" type="button" title="Xoá các luồng đã chọn (tự động dừng nếu đang chạy)">
+                  <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                  <span>Xoá đã chọn</span>
+                </button>
+              </div>
+            </section>
 
-          <!-- Spreadsheet Batch Table -->
-          <div class="table-card">
-            <div class="table-scroll">
-              <table class="data-table" id="batchTable">
-                <thead>
-                  <tr>
-                    <th style="width: 30px">
-                      <input type="checkbox" id="selectAllBatch" checked />
-                    </th>
-                    <th style="width: 32px">#</th>
-                    <th style="width: 130px">Luồng &amp; Loại</th>
-                    <th style="width: 240px">Prompt Chi tiết</th>
-                    <th style="width: 165px">Tham chiếu (NV · SP · Khung)</th>
-                    <th style="width: 168px">Tỉ lệ · Giây · CL</th>
-                    <th style="width: 92px">Tài khoản</th>
-                    <th style="width: 135px">Trạng thái</th>
-                    <th style="width: 115px">Kết quả</th>
-                    <th style="width: 82px">Thao tác</th>
-                  </tr>
-                </thead>
-                <tbody id="batchTableBody"></tbody>
-              </table>
-            </div>
+            <!-- Preview: the stream picked in the queue, editable in place. -->
+            <section class="queue-preview" id="queuePreview" aria-label="Xem trước" aria-live="polite"></section>
           </div>
         </section>
 
@@ -379,13 +400,13 @@
             <div class="topbar-left">
               <div class="view-title">
                 <span class="view-title-icon">
-                  <svg class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                  <svg aria-hidden="true" class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 </span>
                 <span>Quản lý Tài khoản Muse.ai (Multi-Profile CDP &amp; Keepalive 48h)</span>
               </div>
               <div class="stat-pills">
                 <span class="stat-pill accent">LIVE: <strong id="accStatActive">0</strong></span>
-                <span class="stat-pill" style="background: var(--danger-soft); color: var(--danger); border-color: rgba(239,68,68,0.28)">DIE: <strong id="accStatInvalid" style="color: var(--danger)">0</strong></span>
+                <span class="stat-pill danger">DIE: <strong id="accStatInvalid">0</strong></span>
                 <span class="stat-pill">Tổng: <strong id="accStatTotal">0</strong></span>
               </div>
             </div>
@@ -398,16 +419,16 @@
                   <option value="4">4 ních cùng lúc</option>
                 </select>
                 <button class="btn btn-primary btn-sm" id="btnBrowserLoginCookie">
-                  <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                  <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
                   <span>Mở Chrome đăng nhập (Tự lấy Cookie)</span>
                 </button>
               </div>
               <button class="btn btn-soft btn-sm" id="btnRenewAllAccounts">
-                <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
                 <span>Check LIVE / DIE tất cả (+48h)</span>
               </button>
               <a class="btn btn-sm" href="/admin/extension.zip" download>
-                <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-1.705.707 2.402 2.402 0 0 1-1.704-.706l-1.568-1.568a1.026 1.026 0 0 0-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 1 1-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 0 0-.289-.877l-1.568-1.568A2.402 2.402 0 0 1 1.998 12c0-.617.236-1.234.706-1.704L4.23 8.77c.24-.24.581-.353.917-.303.515.077.877.528 1.073 1.01a2.5 2.5 0 1 0 3.259-3.259c-.482-.196-.933-.558-1.01-1.073-.05-.336.062-.676.303-.917l1.525-1.525A2.402 2.402 0 0 1 12 1.998c.617 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29.493-.074.84-.504 1.02-.968a2.5 2.5 0 1 1 3.237 3.237c-.464.18-.894.527-.967 1.02Z"/></svg>
+                <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-1.705.707 2.402 2.402 0 0 1-1.704-.706l-1.568-1.568a1.026 1.026 0 0 0-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 1 1-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 0 0-.289-.877l-1.568-1.568A2.402 2.402 0 0 1 1.998 12c0-.617.236-1.234.706-1.704L4.23 8.77c.24-.24.581-.353.917-.303.515.077.877.528 1.073 1.01a2.5 2.5 0 1 0 3.259-3.259c-.482-.196-.933-.558-1.01-1.073-.05-.336.062-.676.303-.917l1.525-1.525A2.402 2.402 0 0 1 12 1.998c.617 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29.493-.074.84-.504 1.02-.968a2.5 2.5 0 1 1 3.237 3.237c-.464.18-.894.527-.967 1.02Z"/></svg>
                 <span>Tải Chrome Extension (.zip)</span>
               </a>
             </div>
@@ -417,7 +438,7 @@
             <div class="card">
               <div class="card-title">
                 <span class="card-title-left">
-                  <svg class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
+                  <svg aria-hidden="true" class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
                   <span>Nhập Cookie thủ công (JSON Cookie-Editor hoặc Header String)</span>
                 </span>
               </div>
@@ -437,11 +458,11 @@
                 id="accCookieInput"
                 class="textarea"
                 rows="3"
-                placeholder='Dán mảng JSON từ tiện ích Cookie-Editor hoặc chuỗi "hatch_sess=...; hatch_vml=...; hatch_gw=..."'
+                placeholder='Dán mảng JSON từ tiện ích Cookie-Editor hoặc chuỗi "hatch_sess=...; hatch_vml=...; hatch_gw=…"'
               ></textarea>
               <div style="display: flex; gap: 8px; margin-top: 10px; justify-content: flex-end">
                 <button class="btn btn-primary" id="btnAddAccountManual">
-                  <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+                  <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                   <span>Lưu &amp; Check LIVE/DIE ngay</span>
                 </button>
               </div>
@@ -450,12 +471,12 @@
             <div class="card">
               <div class="card-title">
                 <span class="card-title-left">
-                  <svg class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
+                  <svg aria-hidden="true" class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
                   <span>Cơ chế Profile Độc Lập &amp; Tự động Bảo hoạt 48h</span>
                 </span>
               </div>
               <p style="font-size: 12.5px; color: var(--muted-foreground); line-height: 1.6; margin-bottom: 8px">
-                • <strong style="color: var(--foreground)">Profile Chrome Độc Lập:</strong> Mỗi tài khoản được cấp một thư mục Profile và cổng CDP riêng biệt (<code>:9225</code>, <code>:9226</code>, <code>:9227</code>...) giúp đăng nhập nhiều tài khoản song song không bao giờ đụng độ session.
+                • <strong style="color: var(--foreground)">Profile Chrome Độc Lập:</strong> Mỗi tài khoản được cấp một thư mục Profile và cổng CDP riêng biệt (<code>:9225</code>, <code>:9226</code>, <code>:9227</code>…) giúp đăng nhập nhiều tài khoản song song không bao giờ đụng độ session.
               </p>
               <p style="font-size: 12.5px; color: var(--muted-foreground); line-height: 1.6; margin-bottom: 8px">
                 • <strong style="color: var(--foreground)">Đồng bộ Cookie httpOnly:</strong> Tự động đọc và làm mới 4 cookie cốt lõi (<code>hatch_sess</code>, <code>hatch_vml</code>, <code>hatch_gw</code>, <code>hatch_native_auth_device</code>) trực tiếp qua giao thức WebSocket CDP.
@@ -494,7 +515,7 @@
             <div class="topbar-left">
               <div class="view-title">
                 <span class="view-title-icon">
-                  <svg class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                  <svg aria-hidden="true" class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
                 </span>
                 <span>Trợ lý Chat Muse-Spark &amp; Xưởng Kịch bản AI</span>
               </div>
@@ -507,7 +528,7 @@
                 <option value="muse-video">muse-video (Tạo video trong Chat)</option>
               </select>
               <button class="btn btn-sm" id="btnClearChat">
-                <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                 <span>Xóa hội thoại</span>
               </button>
             </div>
@@ -526,10 +547,10 @@
                   type="text"
                   id="chatPromptInput"
                   class="input"
-                  placeholder="Nhập câu hỏi hoặc yêu cầu cho Muse-Spark AI (Nhấn Enter để gửi)..."
+                  placeholder="Nhập câu hỏi hoặc yêu cầu cho Muse-Spark AI (Nhấn Enter để gửi)…"
                 />
                 <button class="btn btn-primary" id="btnSendChat">
-                  <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                  <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
                   <span>Gửi</span>
                 </button>
               </div>
@@ -538,7 +559,7 @@
             <div class="card" style="display: flex; flex-direction: column; gap: 10px; overflow-y: auto">
               <div class="card-title">
                 <span class="card-title-left">
-                  <svg class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                  <svg aria-hidden="true" class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
                   <span>Tạo kịch bản bằng AI (Google Gemini Multimodal / Muse-Spark)</span>
                 </span>
               </div>
@@ -568,10 +589,10 @@
                     type="password"
                     id="scriptGeminiKeyInput"
                     class="input"
-                    placeholder="Dán mã AIzaSy... từ Google AI Studio"
+                    placeholder="Dán mã AIzaSy… từ Google AI Studio"
                   />
                   <button class="btn btn-soft btn-sm" id="btnTestGeminiKey" type="button">
-                    <svg class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                    <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
                     <span>Lưu &amp; Test Key</span>
                   </button>
                 </div>
@@ -583,7 +604,7 @@
                   id="scriptTopicInput"
                   class="textarea"
                   rows="2"
-                  placeholder="VD: 5 cảnh video review sản phẩm thực tế phong cách studio điện ảnh 4K, chuyển động camera mượt mà..."
+                  placeholder="VD: 5 cảnh video review sản phẩm thực tế phong cách studio điện ảnh 4K, chuyển động camera mượt mà…"
                 ></textarea>
               </div>
 
@@ -591,26 +612,26 @@
                 <label class="field-label">Ảnh tham chiếu đính kèm (Nhân vật mẫu &amp; Sản phẩm mẫu)</label>
                 <div class="bulk-ref-group">
                   <div class="bulk-ref-slot">
-                    <button class="btn btn-soft btn-sm" id="btnUploadScriptCharacter" type="button" style="height: 24px; padding: 0 8px">
-                      <svg class="lucide" width="12.5" height="12.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
+                    <button class="btn btn-soft btn-sm" id="btnUploadScriptCharacter" type="button" style="padding: 0 8px">
+                      <svg aria-hidden="true" class="lucide" width="12.5" height="12.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
                       <span>Nhân vật</span>
                     </button>
                     <div id="scriptCharacterPreviewBox" style="display: none; align-items: center; gap: 4px">
-                      <img id="scriptCharacterThumb" src="" class="ref-thumb" style="width: 22px; height: 22px" />
+                      <img id="scriptCharacterThumb" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" alt="Ảnh nhân vật" class="ref-thumb" style="width: 22px; height: 22px" />
                       <span id="scriptCharacterName" style="font-size: 11px; color: var(--accent-strong); max-width: 75px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap"></span>
-                      <button class="btn btn-danger btn-sm" id="btnClearScriptCharacter" type="button" style="height: 20px; padding: 0 5px">×</button>
+                      <button class="btn btn-danger btn-sm" id="btnClearScriptCharacter" type="button" style="padding: 0 5px">×</button>
                     </div>
                   </div>
 
                   <span class="bulk-ref-divider"></span>
 
                   <div class="bulk-ref-slot" style="flex: 1; min-width: 0">
-                    <button class="btn btn-soft btn-sm" id="btnUploadScriptProduct" type="button" style="height: 24px; padding: 0 8px">
-                      <svg class="lucide" width="12.5" height="12.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16h6"/><path d="M19 13v6"/><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"/><path d="m7.5 4.27 9 5.15"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" x2="12" y1="22" y2="12"/></svg>
+                    <button class="btn btn-soft btn-sm" id="btnUploadScriptProduct" type="button" style="padding: 0 8px">
+                      <svg aria-hidden="true" class="lucide" width="12.5" height="12.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16h6"/><path d="M19 13v6"/><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"/><path d="m7.5 4.27 9 5.15"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" x2="12" y1="22" y2="12"/></svg>
                       <span>Chọn nhiều SP</span>
                     </button>
                     <div id="scriptProductListBox" class="product-chips-list"></div>
-                    <button class="btn btn-danger btn-sm" id="btnClearScriptProduct" type="button" style="display: none; height: 20px; padding: 0 6px">
+                    <button class="btn btn-danger btn-sm" id="btnClearScriptProduct" type="button" style="display: none; padding: 0 6px">
                       Xóa hết
                     </button>
                   </div>
@@ -661,7 +682,7 @@
               </div>
 
               <button class="btn btn-primary" id="btnGenerateScriptPrompts">
-                <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
+                <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
                 <span>Tạo kịch bản bằng AI (Gemini / Muse-Spark)</span>
               </button>
 
@@ -672,15 +693,15 @@
                 id="scriptResultOutput"
                 class="textarea"
                 style="flex: 1; min-height: 110px"
-                placeholder="Nội dung các dòng Prompt sẽ xuất hiện tại đây..."
+                placeholder="Nội dung các dòng Prompt sẽ xuất hiện tại đây…"
               ></textarea>
               <div style="display: flex; gap: 8px">
                 <button class="btn btn-soft" id="btnPushScriptToBatch" style="flex: 1">
-                  <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/></svg>
+                  <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 17V3"/><path d="m6 11 6 6 6-6"/><path d="M19 21H5"/></svg>
                   <span>Đẩy sang Bảng sản xuất</span>
                 </button>
                 <button class="btn btn-primary" id="btnPushAndRunScriptBatch">
-                  <svg class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+                  <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>
                   <span>Đẩy sang Bảng &amp; Chạy ngay</span>
                 </button>
               </div>
@@ -694,7 +715,7 @@
             <div class="topbar-left">
               <div class="view-title">
                 <span class="view-title-icon">
-                  <svg class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                  <svg aria-hidden="true" class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
                 </span>
                 <span>Thư viện Video &amp; Ảnh đã sản xuất</span>
               </div>
@@ -709,11 +730,11 @@
                 <option value="image">Chỉ Ảnh</option>
               </select>
               <button class="btn btn-sm" id="btnRefreshMedia">
-                <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
                 <span>Làm mới</span>
               </button>
               <button class="btn btn-soft btn-sm" id="btnOpenMediaFolderGallery">
-                <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>
+                <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>
                 <span>Mở thư mục chứa file</span>
               </button>
             </div>
@@ -728,18 +749,18 @@
             <div class="topbar-left">
               <div class="view-title">
                 <span class="view-title-icon">
-                  <svg class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
+                  <svg aria-hidden="true" class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
                 </span>
                 <span>Nhật ký Tiến trình &amp; Hoạt động CDP</span>
               </div>
             </div>
             <div class="topbar-actions">
               <button class="btn btn-sm" id="btnRefreshTasks">
-                <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
                 <span>Làm mới</span>
               </button>
               <button class="btn btn-danger btn-sm" id="btnClearTasks">
-                <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                 <span>Xóa lịch sử tiến trình</span>
               </button>
             </div>
@@ -771,7 +792,7 @@
                 Nhật ký Engine CDP trực tiếp
               </div>
               <div class="table-scroll" style="padding: 12px">
-                <pre class="code-block" id="engineLogsBox" style="height: 100%; margin: 0">Đang tải nhật ký...</pre>
+                <pre class="code-block" id="engineLogsBox" style="height: 100%; margin: 0">Đang tải nhật ký…</pre>
               </div>
             </div>
           </div>
@@ -783,14 +804,14 @@
             <div class="topbar-left">
               <div class="view-title">
                 <span class="view-title-icon">
-                  <svg class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                  <svg aria-hidden="true" class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
                 </span>
                 <span>Cổng chuẩn OpenAI API (/v1) &amp; Cấu hình Hệ thống</span>
               </div>
             </div>
             <div class="topbar-actions">
               <button class="btn btn-primary btn-sm" id="btnSaveSettings">
-                <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>
+                <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>
                 <span>Lưu cấu hình hệ thống</span>
               </button>
             </div>
@@ -800,17 +821,17 @@
             <div class="card">
               <div class="card-title">
                 <span class="card-title-left">
-                  <svg class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
+                  <svg aria-hidden="true" class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
                   <span>Thông tin kết nối OpenAI-Compatible API</span>
                 </span>
               </div>
               <div style="display: flex; flex-direction: column; gap: 10px">
                 <div>
-                  <label class="field-label">OpenAI Base URL (Dùng cho Cursor, NextChat, OpenWebUI, n8n, SDK...)</label>
+                  <label class="field-label">OpenAI Base URL (Dùng cho Cursor, NextChat, OpenWebUI, n8n, SDK…)</label>
                   <div style="display: flex; gap: 8px">
                     <input type="text" id="apiBaseUrlInput" class="input mono" readonly />
                     <button class="btn btn-soft" id="btnCopyBaseUrl">
-                      <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                      <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
                       <span>Sao chép</span>
                     </button>
                   </div>
@@ -821,11 +842,11 @@
                   <div style="display: flex; gap: 8px">
                     <input type="text" id="apiKeyInput" class="input mono" readonly />
                     <button class="btn btn-soft" id="btnCopyApiKey">
-                      <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                      <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
                       <span>Sao chép</span>
                     </button>
                     <button class="btn btn-warn" id="btnRotateApiKey">
-                      <svg class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
+                      <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
                       <span>Đổi Key mới</span>
                     </button>
                   </div>
@@ -850,7 +871,7 @@
             <div class="card">
               <div class="card-title">
                 <span class="card-title-left">
-                  <svg class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
+                  <svg aria-hidden="true" class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
                   <span>Tinh chỉnh Hiệu năng, Gemini API &amp; Bảo hoạt</span>
                 </span>
               </div>
@@ -877,7 +898,7 @@
               <div class="form-row" style="margin-bottom: 0">
                 <div style="grid-column: 1 / -1">
                   <label class="field-label">Google Gemini API Key (Dùng tạo kịch bản AI)</label>
-                  <input type="password" id="setGeminiApiKey" class="input" placeholder="AIzaSy..." />
+                  <input type="password" id="setGeminiApiKey" class="input" placeholder="AIzaSy…" />
                 </div>
               </div>
             </div>
@@ -886,7 +907,7 @@
           <div class="card">
             <div class="card-title">
               <span class="card-title-left">
-                <svg class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
+                <svg aria-hidden="true" class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
                 <span>Ví dụ gọi API chuẩn OpenAI (Chat, Tạo Ảnh, Tạo Video)</span>
               </span>
             </div>
@@ -903,7 +924,7 @@
           <span id="modalMediaTitle">Xem trước Media</span>
           <div style="display: flex; gap: 8px">
             <a class="btn btn-primary btn-sm" id="modalDownloadBtn" href="#" download>
-              <svg class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+              <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
               <span>Tải xuống</span>
             </a>
             <button class="btn btn-sm" id="modalCloseBtn">Đóng</button>
@@ -921,6 +942,7 @@
     <!-- Toast Container -->
     <div class="toast-container" id="toastContainer"></div>
 
+    <script src="/prompt-lines.js"></script>
     <script src="/renderer.js"></script>
   </body>
 </html>
