@@ -547,25 +547,100 @@
     }
   }
 
+  // "m:ss", or "h:mm:ss" past an hour, for run and step times.
+  function formatDuration(ms) {
+    const total = Math.max(0, Math.round((Number(ms) || 0) / 1000));
+    const h = Math.floor(total / 3600);
+    const m = Math.floor((total % 3600) / 60);
+    const sec = String(total % 60).padStart(2, "0");
+    return h ? `${h}:${String(m).padStart(2, "0")}:${sec}` : `${m}:${sec}`;
+  }
+
+  function rowElapsedMs(row) {
+    return row.startedAt ? (row.finishedAt || Date.now()) - row.startedAt : 0;
+  }
+
+  // Two pollers report a running row (its job and the status task list); the bar only ever moves forward.
+  function setRowProgress(row, pct, text) {
+    const n = Number(pct);
+    if (n > 0) row.progressPct = Math.max(Number(row.progressPct) || 0, Math.min(99, n));
+    if (text) row.progressText = String(text);
+  }
+
+  // Most engine messages end in "qua Gateway", so the specific steps are matched before the connection one.
+  function stageLabel(text) {
+    if (/tải.*file|tải trực tiếp|ghi file|lưu/i.test(text)) return "Tải file";
+    if (/ghép|stitch|ffmpeg/i.test(text)) return "Ghép video";
+    if (/phân cảnh|render|tạo video/i.test(text)) return "Tạo cảnh";
+    if (/ảnh tham chiếu|tải.*ảnh|upload/i.test(text)) return "Nạp ảnh";
+    if (/gửi lệnh|nhập prompt/i.test(text)) return "Gửi lệnh";
+    if (/xác thực|kết nối|khởi tạo|gateway|noise/i.test(text)) return "Kết nối VM";
+    return "Đang tạo";
+  }
+
   function buildCompactRunningBadgeParts(row) {
-    const pct = Math.min(99, Math.max(5, Number(row.progressPct) || 15));
-    const rawTxt = String(row.progressText || "Đang xử lý qua cổng HTTP + Noise-XX Gateway...");
-    const secMatch = rawTxt.match(/\((\d+s)\)/);
-    const elapsedPart = secMatch ? ` (${secMatch[1]})` : "";
-
-    let shortLabel = "Đang tạo";
-    if (/xác thực|kết nối|gateway|noise/i.test(rawTxt)) shortLabel = "Kết nối VM";
-    else if (/tải.*ảnh|tham chiếu|upload/i.test(rawTxt)) shortLabel = "Nạp ảnh";
-    else if (/gửi lệnh|nhập prompt/i.test(rawTxt)) shortLabel = "Gửi lệnh";
-    else if (/ghép|stitch|ffmpeg|nối/i.test(rawTxt)) shortLabel = "Ghép video";
-    else if (/tải.*file|tải trực tiếp|lưu/i.test(rawTxt)) shortLabel = "Tải MP4";
-    else if (/phân cảnh|render|tạo video/i.test(rawTxt)) shortLabel = "Tạo cảnh";
-
+    const pct = Math.min(99, Math.max(1, Math.round(Number(row.progressPct) || 1)));
+    const rawTxt = String(row.progressText || "Đang xử lý...");
+    const elapsed = row.startedAt ? `, ${formatDuration(rowElapsedMs(row))}` : "";
     return {
       pct,
-      shortText: `${pct}%, ${shortLabel}${elapsedPart}`,
-      fullTitle: `${pct}% — ${rawTxt}`,
+      shortText: `${pct}%, ${stageLabel(rawTxt)}${elapsed}`,
+      fullTitle: `${pct}%: ${rawTxt}`,
     };
+  }
+
+  // The server's step timeline for a run: when each step began and how long it lasted.
+  function renderStepList(row) {
+    const steps = Array.isArray(row.steps) ? row.steps : [];
+    if (!steps.length) return "";
+    const endAt = rowElapsedMs(row);
+    const items = steps.map((step, i) => {
+      const next = steps[i + 1];
+      const lasted = next || row.status === "running" ? formatDuration(Math.max(0, (next ? next.at : endAt) - step.at)) : "";
+      return `<li><span class="step-at">${formatDuration(step.at)}</span><span class="step-text">${escapeHtml(step.text)}</span><span class="step-dur">${lasted}</span></li>`;
+    });
+    return `<ol class="progress-steps">${items.join("")}</ol>`;
+  }
+
+  function rowProgressBlock(row) {
+    if (row.status === "running") {
+      const { pct } = buildCompactRunningBadgeParts(row);
+      return `<div class="preview-progress" data-progress-id="${row.id}">
+        <div class="progress-head"><strong>${pct}%</strong><span class="progress-stage">${escapeHtml(row.progressText || "")}</span><span class="progress-elapsed">${formatDuration(rowElapsedMs(row))}</span></div>
+        <div class="progress-track" role="progressbar" aria-label="Tiến trình luồng" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${pct}"><div class="progress-fill" style="width:${pct}%"></div></div>
+        ${renderStepList(row)}
+      </div>`;
+    }
+    if (row.status === "error") {
+      const where = row.errorStep ? ` ở bước: ${escapeHtml(row.errorStep)}` : "";
+      const after = row.startedAt ? ` (sau ${formatDuration(rowElapsedMs(row))})` : "";
+      return `<div class="preview-progress" data-progress-id="${row.id}">
+        <p class="preview-error"><strong>Lỗi${where}</strong>${after}</p>
+        <p class="preview-error">${escapeHtml(row.error || "Không rõ lỗi")}</p>
+        ${renderStepList(row)}
+        <button class="btn btn-sm" data-row-action="copy-error" data-id="${row.id}"><span>Sao chép chi tiết lỗi</span></button>
+      </div>`;
+    }
+    if (row.status === "done" && Array.isArray(row.steps) && row.steps.length) {
+      return `<details class="preview-progress"><summary>Hoàn tất sau ${formatDuration(rowElapsedMs(row))}, ${row.steps.length} bước</summary>${renderStepList(row)}</details>`;
+    }
+    return "";
+  }
+
+  // Everything needed to report or debug a failed row; it holds no cookie or key.
+  function errorReport(row) {
+    const steps = (row.steps || []).map((step) => `  ${formatDuration(step.at)}  ${step.text}`);
+    return [
+      "Muse AI Studio: chi tiết lỗi",
+      `Thời điểm: ${new Date(row.finishedAt || Date.now()).toLocaleString("vi-VN")}`,
+      `Luồng: ${row.id}${row.lastJobId ? `, job ${row.lastJobId}` : ""}`,
+      `Cấu hình: ${rowMeta(row, state.batchRows.indexOf(row))}`,
+      `Bước lỗi: ${row.errorStep || "không rõ"} (sau ${formatDuration(rowElapsedMs(row))})`,
+      `Lỗi: ${row.error || "không rõ"}`,
+      `Prompt: ${row.prompt}`,
+      "Các bước:",
+      ...(steps.length ? steps : ["  (không có)"]),
+    ].join("\n");
   }
 
   // ==================== NAVIGATION ====================
@@ -649,8 +724,7 @@
           }
           if (matchingRow && matchingRow.status === "running" && !matchingRow.cancelledByUser) {
             usedRowIds.add(matchingRow.id);
-            matchingRow.progressPct = rt.progress || 15;
-            matchingRow.progressText = rt.progress_text || "Đang xử lý trên cổng Gateway...";
+            setRowProgress(matchingRow, rt.progress, rt.progress_text);
             changed = true;
           }
         }
@@ -726,6 +800,9 @@
         }
       }
     }
+    const block = document.querySelector("#queuePreview .preview-progress[data-progress-id]");
+    const shown = block && state.batchRows.find((r) => r.id === block.dataset.progressId);
+    if (shown && shown.status === "running") block.outerHTML = rowProgressBlock(shown);
   }
 
   function renderApiExamples(baseUrlV1, apiKey) {
@@ -997,7 +1074,8 @@ curl ${baseUrlV1}/videos \\
     }
     if (row.status === "done") return `<span class="badge badge-ok">${ICON.check}<span>Hoàn tất</span></span>`;
     if (row.status === "error") {
-      return `<span class="badge badge-fail" title="${escapeHtml(row.error)}">${ICON.alert}<span>Lỗi</span></span>`;
+      const where = row.errorStep ? `Lỗi ở bước: ${row.errorStep}\n` : "";
+      return `<span class="badge badge-fail" title="${escapeHtml(where + (row.error || ""))}">${ICON.alert}<span>Lỗi</span></span>`;
     }
     return `<span class="badge badge-idle">Chờ chạy</span>`;
   }
@@ -1096,7 +1174,7 @@ curl ${baseUrlV1}/videos \\
     box.innerHTML = `
       ${media}
       <div class="preview-meta">${rowStatusBadge(row)}<span>${escapeHtml(rowMeta(row, idx))}</span></div>
-      ${row.status === "error" && row.error ? `<p class="preview-error">${escapeHtml(row.error)}</p>` : ""}
+      ${rowProgressBlock(row)}
       <label class="field-label" for="previewPrompt">Prompt (Có thể sửa trực tiếp ngay cả khi đang chạy)</label>
       <textarea id="previewPrompt" class="textarea preview-prompt row-prompt-input" data-id="${row.id}" spellcheck="false" placeholder="Nhập prompt cho luồng này…">${escapeHtml(row.prompt)}</textarea>
       <label class="field-label" for="previewOutputName">Tên file đầu ra (tuỳ chọn)</label>
@@ -1476,6 +1554,10 @@ curl ${baseUrlV1}/videos \\
     row.filename = "";
     row.progressPct = 5;
     row.progressText = "Đang khởi tạo trên cổng Gateway...";
+    row.startedAt = Date.now();
+    row.finishedAt = null;
+    row.steps = [];
+    row.errorStep = "";
     renderBatchTable();
 
     try {
@@ -1536,6 +1618,7 @@ curl ${baseUrlV1}/videos \\
       let res = null;
       if (startRes.async && startRes.jobId) {
         row.jobId = startRes.jobId;
+        row.lastJobId = startRes.jobId;
         const pollStartedAt = Date.now();
         const maxPollMs = 120 * 60 * 1000; // Wait up to 120 minutes for multi-stream / long video stitching
         while (Date.now() - pollStartedAt < maxPollMs) {
@@ -1555,12 +1638,8 @@ curl ${baseUrlV1}/videos \\
           if (isStale() || jobRes.status === "cancelled") {
             return;
           }
-          if (typeof jobRes.progress === "number" && jobRes.progress > 0) {
-            row.progressPct = jobRes.progress;
-          }
-          if (jobRes.progress_text) {
-            row.progressText = jobRes.progress_text;
-          }
+          setRowProgress(row, jobRes.progress, jobRes.progress_text);
+          if (Array.isArray(jobRes.steps)) row.steps = jobRes.steps;
           updateRunningRowBadgesInDom();
           if (jobRes.status === "done" && jobRes.result) {
             res = jobRes.result;
@@ -1586,6 +1665,7 @@ curl ${baseUrlV1}/videos \\
       row.status = "done";
       row.progressPct = 100;
       row.progressText = "Hoàn tất 100%";
+      row.finishedAt = Date.now();
       row.mediaUrl = res.mediaUrl || "";
       row.filename = res.filename || "";
       if (res.productTitle) {
@@ -1606,6 +1686,8 @@ curl ${baseUrlV1}/videos \\
         renderBatchTable();
         return;
       }
+      row.finishedAt = Date.now();
+      row.errorStep = row.progressText || "";
       row.status = "error";
       row.error = err.message;
       saveBatchRows();
@@ -2501,6 +2583,11 @@ curl ${baseUrlV1}/videos \\
       } else if (action === "restart") {
         await stopRows([row], { silent: true });
         runSingleRow(row);
+      } else if (action === "copy-error") {
+        navigator.clipboard
+          .writeText(errorReport(row))
+          .then(() => showToast("Đã sao chép chi tiết lỗi."))
+          .catch(() => showToast("Không sao chép được vào clipboard.", true));
       } else if (action === "edit") {
         state.previewRowId = row.id;
         renderBatchTable();

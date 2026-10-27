@@ -151,6 +151,22 @@ function parseMultipart(buffer, boundary) {
   return { fields, files };
 }
 
+// A job's step timeline, so a failed render shows which step it stopped at and how long each took.
+// The engine repeats a step with a fresh counter ("(45s)", "12 KB"), so digits don't make a new step.
+const MAX_JOB_STEPS = 40;
+const stepKey = (text) => text.replace(/\d+/g, "#");
+
+function recordJobStep(steps, { at, pct, text }) {
+  const t = String(text || "").trim();
+  if (!t) return steps;
+  const last = steps[steps.length - 1];
+  if (last && stepKey(last.text) === stepKey(t)) {
+    return [...steps.slice(0, -1), { ...last, pct, text: t }];
+  }
+  const next = [...steps, { at, pct, text: t }];
+  return next.length > MAX_JOB_STEPS ? [next[0], ...next.slice(-(MAX_JOB_STEPS - 1))] : next;
+}
+
 class MuseServer {
   constructor(options = {}) {
     this.rootDir = options.rootDir || path.resolve(__dirname, "..");
@@ -1023,37 +1039,54 @@ Yêu cầu bắt buộc:
           progress: 5,
           progressText: "Đang khởi tạo trên cổng Gateway...",
           createdAt: Date.now(),
+          finishedAt: null,
+          steps: [],
           result: null,
           error: null,
         };
+        const markStep = (text) => {
+          jobRecord.steps = recordJobStep(jobRecord.steps, {
+            at: Date.now() - jobRecord.createdAt,
+            pct: jobRecord.progress,
+            text,
+          });
+        };
+        const finish = (status, text) => {
+          jobRecord.status = status;
+          jobRecord.finishedAt = Date.now();
+          markStep(text);
+        };
+        markStep(jobRecord.progressText);
         this.asyncJobs.set(jobId, jobRecord);
 
         runGenerationPayload((pct, text) => {
           if (jobRecord.status === "cancelled") return;
           if (typeof pct === "number") jobRecord.progress = pct;
           if (text) jobRecord.progressText = String(text);
+          markStep(jobRecord.progressText);
         })
           .then((resultData) => {
             if (jobRecord.status === "cancelled") return;
-            jobRecord.status = "done";
             jobRecord.progress = 100;
             jobRecord.progressText = "Hoàn tất 100%";
             jobRecord.result = resultData;
+            finish("done", jobRecord.progressText);
           })
           .catch((err) => {
             if (err?.cancelled || jobRecord.status === "cancelled") {
-              jobRecord.status = "cancelled";
               jobRecord.progressText = "Đã dừng";
               jobRecord.error = err?.message || "Đã dừng bởi người dùng";
+              finish("cancelled", jobRecord.progressText);
               return;
             }
-            jobRecord.status = "error";
             jobRecord.error = err.message || "Lỗi tạo video";
+            finish("error", `Lỗi: ${jobRecord.error}`);
           })
           .finally(() => {
+            // unref: a finished job's cleanup timer must not keep the process (or a test run) alive for 2 hours.
             setTimeout(() => {
               this.asyncJobs.delete(jobId);
-            }, 2 * 60 * 60 * 1000);
+            }, 2 * 60 * 60 * 1000).unref();
           });
 
         return this._sendJson(res, 200, {
@@ -1152,6 +1185,8 @@ Yêu cầu bắt buộc:
         status: job.status,
         progress,
         progress_text: progressText,
+        steps: job.steps || [],
+        elapsed_ms: (job.finishedAt || Date.now()) - job.createdAt,
         result: job.result,
         error: job.error,
       });
@@ -1683,4 +1718,5 @@ module.exports = {
   MuseServer,
   buildZipBuffer,
   sizeToAspectRatio,
+  recordJobStep,
 };

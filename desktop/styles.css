@@ -1917,6 +1917,79 @@ input[type="checkbox"] {
   color: var(--danger);
 }
 
+.preview-progress {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-size: 12px;
+}
+
+.preview-progress summary {
+  cursor: pointer;
+  color: var(--muted-foreground);
+}
+
+.progress-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-stage {
+  flex: 1;
+  min-width: 0;
+  overflow-wrap: break-word;
+  color: var(--muted-foreground);
+}
+
+.progress-elapsed {
+  color: var(--muted-foreground);
+}
+
+.progress-track {
+  height: 8px;
+  background: var(--secondary);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--brand);
+  border-radius: 999px;
+}
+
+.progress-steps {
+  margin: 0;
+  padding: 6px 0 0;
+  list-style: none;
+  border-top: 1px solid var(--border);
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.progress-steps li {
+  display: grid;
+  grid-template-columns: 3.5em minmax(0, 1fr) 3.5em;
+  gap: 8px;
+  padding: 2px 0;
+  font-variant-numeric: tabular-nums;
+}
+
+.progress-steps .step-at,
+.progress-steps .step-dur {
+  color: var(--muted-foreground);
+}
+
+.progress-steps .step-dur {
+  text-align: right;
+}
+
+.progress-steps .step-text {
+  overflow-wrap: break-word;
+}
+
 @media (max-width: 1360px) {
   .studio {
     grid-template-columns: minmax(260px, 300px) minmax(0, 1fr);
