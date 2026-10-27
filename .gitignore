@@ -2,6 +2,7 @@ Muse AI Studio.app/
 data/
 node_modules/
 dist/
+graphify-out/
 .DS_Store
 .hallmark/
 desktop/.hallmark/
