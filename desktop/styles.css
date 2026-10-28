@@ -9,42 +9,42 @@
 /* Hallmark · dropped /v1/media/job_fake_2.mp4, /v1/media/job_fake_3.mp4, /v1/media/job_fake_4.mp4, /v1/media/job_fake_5.mp4, /v1/media/job_fake_6.mp4 · the user asked for a queue list with a preview: each stream's download link and editors now sit in the preview for the stream picked */
 /* Hallmark · kept words checked · the markup holds 981 words against 982 before (the title's "&amp;", two lowercased table heads); the 1438 counted every hidden view of the unstyled disk render */
 
-/* Muse AI Studio v2.0, shadcn/ui New York zinc system */
+/* Muse AI Studio v2.0, shadcn/ui New York system, blue on black */
 
 :root,
 [data-theme="dark"] {
-  --background: #09090b;
+  --background: #05070b;
   --foreground: #fafafa;
-  --card: #0c0c0f;
+  --card: #090c12;
   --card-foreground: #fafafa;
-  --card-elevated: #121216;
-  --popover: #09090b;
+  --card-elevated: #0f1420;
+  --popover: #05070b;
   --popover-foreground: #fafafa;
 
-  /* shadcn/ui Primary (Crisp Zinc-50 on Dark) */
-  --primary: #fafafa;
-  --primary-foreground: #09090b;
-  --primary-hover: #e4e4e7;
+  /* shadcn/ui Primary (Blue on Black) */
+  --primary: #2563eb;
+  --primary-foreground: #ffffff;
+  --primary-hover: #1d4ed8;
 
-  /* Brand / Emerald Accent */
-  --brand: #10b981;
-  --brand-foreground: #052e16;
-  --brand-soft: rgba(16, 185, 129, 0.12);
-  --brand-border: rgba(16, 185, 129, 0.28);
+  /* Brand / Blue Accent */
+  --brand: #3b82f6;
+  --brand-foreground: #04122e;
+  --brand-soft: rgba(59, 130, 246, 0.12);
+  --brand-border: rgba(59, 130, 246, 0.3);
 
   /* shadcn/ui Secondary & Muted */
-  --secondary: #1f1f23;
+  --secondary: #141a26;
   --secondary-foreground: #fafafa;
-  --secondary-hover: #27272a;
-  --surface-muted: #18181b;
-  --muted: #a1a1aa;
-  --muted-foreground: #a8a8b1;
+  --secondary-hover: #1b2333;
+  --surface-muted: #10151f;
+  --muted: #94a3b8;
+  --muted-foreground: #a3adbd;
 
   /* Accent (Hover states) */
-  --accent: #1f1f23;
+  --accent: #141a26;
   --accent-foreground: #fafafa;
-  --accent-soft: rgba(16, 185, 129, 0.1);
-  --accent-strong: #34d399;
+  --accent-soft: rgba(59, 130, 246, 0.1);
+  --accent-strong: #60a5fa;
 
   /* Semantic Status */
   --success: #10b981;
@@ -56,13 +56,13 @@
   --info-soft: rgba(59, 130, 246, 0.12);
 
   /* Borders, Inputs & Focus Rings */
-  --border: #27272a;
-  --border-subtle: #1f1f23;
-  --line: #27272a;
-  --line-strong: #3f3f46;
-  --input: #27272a;
-  --ring: #52525b;
-  --bg-soft: #141417;
+  --border: #1c2433;
+  --border-subtle: #141a26;
+  --line: #1c2433;
+  --line-strong: #2a3446;
+  --input: #1c2433;
+  --ring: #3b4a63;
+  --bg-soft: #0b0f17;
 
   /* Radius (shadcn/ui New York uses 6px / 8px) */
   --radius-xs: 4px;
@@ -77,16 +77,16 @@
   --shadow-md: 0 4px 12px -2px rgba(0, 0, 0, 0.5), 0 2px 6px -2px rgba(0, 0, 0, 0.4);
   --shadow-lg: 0 12px 32px -4px rgba(0, 0, 0, 0.65);
 
-  --sidebar-bg: #09090b;
+  --sidebar-bg: #05070b;
 
   /* Type */
   --font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Geist", "SF Pro Text", "Segoe UI", Roboto, sans-serif;
   --font-mono: "JetBrains Mono", "SFMono-Regular", Menlo, Consolas, monospace;
 
   /* States, edges and grounds (every literal colour lives here) */
-  --brand-hover: #059669;
-  --focus: #34d399;
-  --field-edge: #6b6b74;
+  --brand-hover: #2563eb;
+  --focus: #60a5fa;
+  --field-edge: #5b6577;
   --on-danger: #fef2f2;
   --danger-strong: #b91c1c;
   --danger-border: rgba(239, 68, 68, 0.28);
@@ -96,34 +96,34 @@
   --success-border: rgba(16, 185, 129, 0.28);
   --info: #60a5fa;
   --info-border: rgba(59, 130, 246, 0.28);
-  --row-hover: rgba(161, 161, 170, 0.04);
-  --row-selected: rgba(16, 185, 129, 0.04);
-  --scrim: rgba(9, 9, 11, 0.78);
-  --media-ground: #050507;
+  --row-hover: rgba(148, 163, 184, 0.05);
+  --row-selected: rgba(59, 130, 246, 0.08);
+  --scrim: rgba(5, 7, 11, 0.78);
+  --media-ground: #030409;
 }
 
 [data-theme="light"] {
-  --background: #f6fbf8;
+  --background: #f6f8fc;
   --foreground: #09090b;
-  --card: #f6fbf8;
+  --card: #f6f8fc;
   --card-foreground: #09090b;
   --card-elevated: #fafafa;
-  --popover: #f6fbf8;
+  --popover: #f6f8fc;
   --popover-foreground: #09090b;
 
   --primary: #18181b;
   --primary-foreground: #fafafa;
   --primary-hover: #27272a;
 
-  --brand: #047857;
-  --brand-foreground: #f0fdf4;
-  --brand-hover: #065f46;
-  --focus: #047857;
+  --brand: #1d4ed8;
+  --brand-foreground: #eff6ff;
+  --brand-hover: #1e40af;
+  --focus: #1d4ed8;
   --field-edge: #8a8a93;
   --danger-ink-soft: #b91c1c;
   --info: #2563eb;
-  --brand-soft: rgba(5, 150, 105, 0.08);
-  --brand-border: rgba(5, 150, 105, 0.25);
+  --brand-soft: rgba(37, 99, 235, 0.08);
+  --brand-border: rgba(37, 99, 235, 0.25);
 
   --secondary: #f4f4f5;
   --secondary-foreground: #18181b;
@@ -134,8 +134,8 @@
 
   --accent: #f4f4f5;
   --accent-foreground: #18181b;
-  --accent-soft: rgba(5, 150, 105, 0.08);
-  --accent-strong: #059669;
+  --accent-soft: rgba(37, 99, 235, 0.08);
+  --accent-strong: #2563eb;
 
   --success: #059669;
   --success-soft: rgba(5, 150, 105, 0.1);
