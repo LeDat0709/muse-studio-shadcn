@@ -657,6 +657,12 @@
   }
 
   // ==================== STATUS & ACCOUNTS ====================
+  // A status poll already in flight when the user saves a setting carries the OLD
+  // values; applying it afterwards reverts what was just saved (e.g. the export
+  // folder). Within this window after a local save, local state wins over the poll.
+  const SETTINGS_SAVE_GUARD_MS = 4000;
+  let settingsSavedAt = 0;
+
   async function loadStatus() {
     try {
       const data = await api("/admin/status");
@@ -746,9 +752,10 @@
         }
       }
 
-      if (data.settings) {
+      if (data.settings && Date.now() - settingsSavedAt > SETTINGS_SAVE_GUARD_MS) {
         state.settings = data.settings;
-        if ($("#setExportDir")) $("#setExportDir").value = data.settings.exportDir || "";
+        if ($("#setExportDir") && document.activeElement !== $("#setExportDir"))
+          $("#setExportDir").value = data.settings.exportDir || "";
         if ($("#setOutputNameTemplate") && document.activeElement !== $("#setOutputNameTemplate"))
           $("#setOutputNameTemplate").value = data.settings.outputNameTemplate || "";
         if ($("#setPromptTemplateVideo") && document.activeElement !== $("#setPromptTemplateVideo"))
@@ -1830,6 +1837,7 @@ curl ${baseUrlV1}/videos \\
   async function saveExportDir(dir) {
     try {
       await api("/admin/settings", { method: "POST", body: { exportDir: dir } });
+      settingsSavedAt = Date.now();
       if (!state.settings) state.settings = {};
       state.settings.exportDir = dir;
       if ($("#setExportDir")) $("#setExportDir").value = dir;
@@ -3366,6 +3374,7 @@ curl ${baseUrlV1}/videos \\
           outputNameTemplate: $("#setOutputNameTemplate")?.value || "",
         },
       });
+      settingsSavedAt = Date.now();
       if (geminiKey && $("#scriptGeminiKeyInput")) {
         $("#scriptGeminiKeyInput").value = geminiKey;
       }
