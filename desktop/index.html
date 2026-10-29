@@ -411,8 +411,16 @@
               </div>
             </div>
             <div class="topbar-actions">
-              <div style="display: inline-flex; align-items: center; gap: 5px">
-                <select id="multiLoginCountSelect" class="select select-compact" style="width: 122px">
+              <div style="display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap">
+                <input
+                  type="text"
+                  id="loginProxyInput"
+                  class="input"
+                  style="width: 220px; height: 32px; font-size: 11.5px"
+                  placeholder="Proxy ních mới (host:port:user:pass)…"
+                  title="Tùy chọn: Gắn Proxy riêng cho Chrome khi mở đăng nhập ních mới"
+                />
+                <select id="multiLoginCountSelect" class="select select-compact" style="width: 122px; height: 32px">
                   <option value="1" selected>1 ních mới</option>
                   <option value="2">2 ních cùng lúc</option>
                   <option value="3">3 ních cùng lúc</option>
@@ -439,17 +447,28 @@
               <div class="card-title">
                 <span class="card-title-left">
                   <svg aria-hidden="true" class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
-                  <span>Nhập Cookie thủ công (JSON Cookie-Editor hoặc Header String)</span>
+                  <span>Nhập Cookie &amp; Proxy thủ công cho từng tài khoản</span>
                 </span>
               </div>
-              <div style="margin-bottom: 8px">
-                <label class="field-label">Tên gợi nhớ tài khoản (Tùy chọn)</label>
-                <input
-                  type="text"
-                  id="accNameInput"
-                  class="input"
-                  placeholder="VD: Muse Pro #1 (Để trống tự động đặt tên)"
-                />
+              <div style="display: grid; grid-template-columns: 1fr 1.25fr; gap: 8px; margin-bottom: 8px">
+                <div>
+                  <label class="field-label">Tên gợi nhớ tài khoản (Tùy chọn)</label>
+                  <input
+                    type="text"
+                    id="accNameInput"
+                    class="input"
+                    placeholder="VD: Muse Pro #1"
+                  />
+                </div>
+                <div>
+                  <label class="field-label">Proxy riêng cho ních này (HTTP / SOCKS5)</label>
+                  <input
+                    type="text"
+                    id="accProxyInput"
+                    class="input mono"
+                    placeholder="host:port:user:pass hoặc http://... / socks5://..."
+                  />
+                </div>
               </div>
               <label class="field-label">
                 Dữ liệu Cookie (Cần có <code>hatch_sess</code>, <code>hatch_vml</code>, <code>hatch_gw</code>)
@@ -471,19 +490,26 @@
             <div class="card">
               <div class="card-title">
                 <span class="card-title-left">
-                  <svg aria-hidden="true" class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
-                  <span>Cơ chế Profile Độc Lập &amp; Tự động Bảo hoạt 48h</span>
+                  <svg aria-hidden="true" class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                  <span>Gán Proxy Hàng Loạt (Mỗi dòng 1 Proxy cho 1 Tài khoản)</span>
                 </span>
               </div>
-              <p style="font-size: 12.5px; color: var(--muted-foreground); line-height: 1.6; margin-bottom: 8px">
-                • <strong style="color: var(--foreground)">Profile Chrome Độc Lập:</strong> Mỗi tài khoản được cấp một thư mục Profile và cổng CDP riêng biệt (<code>:9225</code>, <code>:9226</code>, <code>:9227</code>…) giúp đăng nhập nhiều tài khoản song song không bao giờ đụng độ session.
-              </p>
-              <p style="font-size: 12.5px; color: var(--muted-foreground); line-height: 1.6; margin-bottom: 8px">
-                • <strong style="color: var(--foreground)">Đồng bộ Cookie httpOnly:</strong> Tự động đọc và làm mới 4 cookie cốt lõi (<code>hatch_sess</code>, <code>hatch_vml</code>, <code>hatch_gw</code>, <code>hatch_native_auth_device</code>) trực tiếp qua giao thức WebSocket CDP.
-              </p>
-              <p style="font-size: 12.5px; color: var(--muted-foreground); line-height: 1.6">
-                • <strong style="color: var(--foreground)">Wake VM &amp; Gia hạn 48h:</strong> Định kỳ gọi <code>/api/session</code> và <code>/api/hatch/vm/wake</code> để giữ máy ảo Muse luôn ở trạng thái <code>RUNNING</code>.
-              </p>
+              <label class="field-label">
+                Hỗ trợ <code>ip:port:user:pass</code>, <code>http://user:pass@ip:port</code>, <code>socks5://user:pass@ip:port</code> (Áp dụng cho cả Gateway Noise-XX &amp; Chrome)
+              </label>
+              <textarea
+                id="bulkProxyInput"
+                class="textarea mono"
+                rows="3"
+                placeholder="103.11.22.33:8080:user1:pass1&#10;socks5://user2:pass2@45.66.77.88:1080"
+              ></textarea>
+              <div style="display: flex; gap: 8px; margin-top: 10px; align-items: center; justify-content: space-between">
+                <span style="font-size: 11.5px; color: var(--muted-foreground)">Mỗi ních chạy độc lập trên IP Proxy riêng khi tạo Video/Ảnh &amp; Mở Chrome.</span>
+                <button class="btn btn-soft" id="btnBulkAssignProxy" type="button">
+                  <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  <span>Gán Proxy hàng loạt</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -494,6 +520,7 @@
                   <tr>
                     <th>ID / Cổng CDP</th>
                     <th>Tên tài khoản / Email</th>
+                    <th>Proxy riêng (HTTP / SOCKS5)</th>
                     <th>Trạng thái</th>
                     <th>Số Cookie</th>
                     <th>Hạn Cookie (hatch_vml)</th>
@@ -899,6 +926,16 @@
                 <div style="grid-column: 1 / -1">
                   <label class="field-label">Google Gemini API Key (Dùng tạo kịch bản AI)</label>
                   <input type="password" id="setGeminiApiKey" class="input" placeholder="AIzaSy…" />
+                </div>
+              </div>
+              <div class="form-row" style="margin-bottom: 0">
+                <div style="grid-column: 1 / -1">
+                  <label class="field-label">Thư mục xuất mặc định (nhớ lại, khỏi chọn mỗi lần)</label>
+                  <div style="display: flex; gap: 6px; align-items: center">
+                    <input type="text" id="setExportDir" class="input" readonly placeholder="Chưa đặt — sẽ hỏi mỗi lần xuất" style="flex: 1" />
+                    <button class="btn btn-soft btn-sm" id="btnChooseExportDir" type="button">Chọn…</button>
+                    <button class="btn btn-sm" id="btnClearExportDir" type="button" title="Xóa thư mục mặc định">Xóa</button>
+                  </div>
                 </div>
               </div>
             </div>

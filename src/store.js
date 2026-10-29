@@ -206,6 +206,7 @@ class Store {
       defaultDuration: "20s",
       defaultQuality: "4K",
       defaultMode: "video",
+      exportDir: "",
       autoKeepalive: true,
       showChromeWindow: false,
       headlessMode: true,

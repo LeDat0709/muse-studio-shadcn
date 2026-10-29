@@ -127,10 +127,11 @@ ipcMain.handle("embong:open-external", async (_evt, url) => {
   return { ok: false };
 });
 
-ipcMain.handle("embong:choose-download-folder", async () => {
+ipcMain.handle("embong:choose-download-folder", async (_evt, defaultPath = "") => {
   const res = await dialog.showOpenDialog(mainWindow, {
     title: "Chọn thư mục xuất Video / Ảnh hàng loạt",
     properties: ["openDirectory", "createDirectory"],
+    ...(defaultPath && fs.existsSync(defaultPath) ? { defaultPath } : {}),
   });
   if (res.canceled || !res.filePaths.length) return { canceled: true };
   return { canceled: false, folderPath: res.filePaths[0] };
@@ -138,6 +139,8 @@ ipcMain.handle("embong:choose-download-folder", async () => {
 
 ipcMain.handle("embong:export-media-files", async (_evt, { filenames = [], targetDir = "" }) => {
   if (!museServer || !targetDir) return { ok: false, error: "Thiếu thư mục đích" };
+  // A remembered folder may have been moved/deleted; report it so the UI can re-prompt.
+  if (!fs.existsSync(targetDir)) return { ok: false, error: "Thư mục đích không còn tồn tại" };
   let copied = 0;
   for (const name of filenames) {
     const safe = path.basename(name);
