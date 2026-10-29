@@ -244,6 +244,12 @@ const PROMPT_INPUT_WAIT_MS = 20000;
 // Abort a job after this many back-to-back history-poll failures instead of
 // polling a dead socket blindly until the (up to 900s+) deadline (H9).
 const MAX_CONSECUTIVE_POLL_FAILURES = 5;
+// History polling cadence. Each running job polls on its own loop, so with many
+// concurrent jobs the base rate is multiplied; widen the interval as concurrency
+// rises so N streams don't all hammer getHistory + event parsing every 2.2s.
+const BASE_POLL_MS = 2200;
+const POLL_MS_PER_EXTRA_JOB = 500;
+const MAX_POLL_MS = 6000;
 
 // Where the tab is and what it shows, for errors that would otherwise say only "no textarea".
 const JS_PAGE_SNAPSHOT = `
@@ -2710,7 +2716,11 @@ foreach ($p in $procs) {
 
       while (Date.now() < deadline) {
         checkCancelled();
-        await new Promise((r) => setTimeout(r, 2200));
+        const pollSleepMs = Math.min(
+          MAX_POLL_MS,
+          BASE_POLL_MS + Math.max(0, this.activeCount - 1) * POLL_MS_PER_EXTRA_JOB
+        );
+        await new Promise((r) => setTimeout(r, pollSleepMs));
         checkCancelled();
         const elapsedSec = Math.round((Date.now() - tStart) / 1000);
         const progPct = Math.min(92, Math.round(36 + elapsedSec * 0.45));

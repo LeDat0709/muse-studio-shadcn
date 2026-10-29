@@ -2510,13 +2510,17 @@ function inspectHistoryEvent(ev) {
     }
   }
 
-  // 3. Scan sandbox://workspace/... or /workspace/... paths in fallback_text / text
-  const rawStr = JSON.stringify(ev || {});
-  const sandboxRegex =
-    /sandbox:\/\/(workspace\/[^\s"'<>\\)]+\.(?:mp4|webm|mov|png|jpe?g|webp))/gi;
-  let m;
-  while ((m = sandboxRegex.exec(rawStr)) !== null) {
-    addRef({ path: m[1] });
+  // 3. Fallback: scan sandbox://workspace/... paths in the raw event. JSON.stringify of a
+  // whole event is costly and runs per event, per poll, per job — only pay it when the
+  // structured extraction above found nothing (the only case this catch-all matters).
+  if (mediaRefs.length === 0) {
+    const rawStr = JSON.stringify(ev || {});
+    const sandboxRegex =
+      /sandbox:\/\/(workspace\/[^\s"'<>\\)]+\.(?:mp4|webm|mov|png|jpe?g|webp))/gi;
+    let m;
+    while ((m = sandboxRegex.exec(rawStr)) !== null) {
+      addRef({ path: m[1] });
+    }
   }
 
   return {
