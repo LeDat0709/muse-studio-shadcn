@@ -1,6 +1,6 @@
 "use strict";
 
-const { app, BrowserWindow, ipcMain, shell, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, dialog, safeStorage } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { MuseServer } = require("../src/server");
@@ -35,12 +35,29 @@ function resolveDataDir() {
   return userDir;
 }
 
+// OS-keychain-backed (Keychain / DPAPI / libsecret) encryption for cookies at rest.
+function buildSecureStore() {
+  try {
+    if (safeStorage && safeStorage.isEncryptionAvailable()) {
+      return {
+        available: true,
+        encrypt: (text) => safeStorage.encryptString(text),
+        decrypt: (buf) => safeStorage.decryptString(buf),
+      };
+    }
+  } catch (_err) {
+    // fall through to plaintext
+  }
+  return { available: false };
+}
+
 async function createMainWindow() {
   const dataDir = resolveDataDir();
   museServer = new MuseServer({
     rootDir: path.resolve(__dirname, ".."),
     dataDir,
     port: Number(process.env.MUSE_PORT || 18638),
+    secureStore: buildSecureStore(),
   });
   const baseUrl = await museServer.start();
 

@@ -1,13 +1,37 @@
 "use strict";
 
 const crypto = require("crypto");
+const net = require("net");
 const tls = require("tls");
+const http = require("http");
+const https = require("https");
 const fs = require("fs");
 const path = require("path");
 
 const MUSE_WEB = "https://muse.ai";
 const GATEWAY_HOST = "hatch.metaaivm.com";
 const GATEWAY_PATH = "/v1/noise";
+
+const BROWSER_UA =
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36";
+
+// Session cookies + bearer token must only ever reach muse.ai itself. Any other
+// host (a redirect target, a foreign media URL) gets no credentials.
+function isMuseHost(hostname) {
+  const h = String(hostname || "").toLowerCase();
+  return h === "muse.ai" || h.endsWith(".muse.ai");
+}
+
+// Headers stripped before a request follows a cross-origin redirect.
+const CREDENTIAL_HEADERS = ["cookie", "authorization", "proxy-authorization"];
+
+function stripCredentialHeaders(headers) {
+  const out = {};
+  for (const [k, v] of Object.entries(headers || {})) {
+    if (!CREDENTIAL_HEADERS.includes(k.toLowerCase())) out[k] = v;
+  }
+  return out;
+}
 
 const SERVICES = {
   daemon: 0,
@@ -535,12 +559,574 @@ class NoiseXXSession {
   }
 }
 
+// ==================== PER-ACCOUNT PROXY TUNNEL (HTTP / HTTPS / SOCKS5) ====================
+
+function parseProxyConfig(rawProxy) {
+  if (!rawProxy) return null;
+  if (typeof rawProxy === "object" && rawProxy.host && rawProxy.port) {
+    return rawProxy;
+  }
+  const s = String(rawProxy || "").trim();
+  if (!s) return null;
+
+  let protocol = "http";
+  let rest = s;
+  const protoMatch = s.match(/^(https?|socks5h?|socks):\/\//i);
+  if (protoMatch) {
+    const p = protoMatch[1].toLowerCase();
+    protocol = p.startsWith("socks") ? "socks5" : p;
+    rest = s.slice(protoMatch[0].length);
+  }
+
+  // Strip trailing slash
+  rest = rest.replace(/\/+$/, "");
+
+  let host = "";
+  let port = 0;
+  let username = "";
+  let password = "";
+
+  if (rest.includes("@")) {
+    const atIdx = rest.lastIndexOf("@");
+    const authPart = rest.slice(0, atIdx);
+    const hostPart = rest.slice(atIdx + 1);
+    const colonAuth = authPart.indexOf(":");
+    if (colonAuth >= 0) {
+      username = decodeURIComponent(authPart.slice(0, colonAuth));
+      password = decodeURIComponent(authPart.slice(colonAuth + 1));
+    } else {
+      username = decodeURIComponent(authPart);
+    }
+    const colonHost = hostPart.lastIndexOf(":");
+    if (colonHost > 0) {
+      host = hostPart.slice(0, colonHost).replace(/^\[|\]$/g, "");
+      port = Number(hostPart.slice(colonHost + 1));
+    }
+  } else {
+    // Support host:port:user:pass OR host:port
+    const parts = rest.split(":");
+    if (parts.length >= 4 && /^\d+$/.test(parts[1])) {
+      host = parts[0];
+      port = Number(parts[1]);
+      username = parts[2];
+      password = parts.slice(3).join(":");
+    } else if (parts.length === 2 && /^\d+$/.test(parts[1])) {
+      host = parts[0];
+      port = Number(parts[1]);
+    } else {
+      try {
+        const u = new URL(protoMatch ? s : `http://${s}`);
+        host = u.hostname;
+        port = Number(u.port || (protocol === "https" ? 443 : 8080));
+        username = decodeURIComponent(u.username || "");
+        password = decodeURIComponent(u.password || "");
+      } catch (_e) {
+        return null;
+      }
+    }
+  }
+
+  if (!host || !Number.isFinite(port) || port <= 0 || port > 65535) {
+    return null;
+  }
+
+  return {
+    raw: s,
+    protocol,
+    host,
+    port,
+    username: username || "",
+    password: password || "",
+    label: `${protocol}://${username ? `${username}:***@` : ""}${host}:${port}`,
+  };
+}
+
+function connectThroughSocks5(proxy, targetHost, targetPort, timeoutMs = 15000) {
+  return new Promise((resolve, reject) => {
+    const sock = net.connect({ host: proxy.host, port: proxy.port });
+    let settled = false;
+    let buf = Buffer.alloc(0);
+    let stage = "greeting"; // greeting -> auth -> connect -> done
+
+    const fail = (err) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try {
+        sock.destroy();
+      } catch (_e) {}
+      reject(err);
+    };
+
+    const timer = setTimeout(() => {
+      fail(new Error(`SOCKS5 proxy timeout (${proxy.host}:${proxy.port})`));
+    }, timeoutMs);
+
+    const sendConnectCmd = () => {
+      stage = "connect";
+      const hostBuf = Buffer.from(targetHost, "utf8");
+      const req = Buffer.alloc(4 + 1 + hostBuf.length + 2);
+      req[0] = 0x05; // SOCKS5
+      req[1] = 0x01; // CONNECT
+      req[2] = 0x00; // RSV
+      req[3] = 0x03; // ATYP = Domain name
+      req[4] = hostBuf.length;
+      hostBuf.copy(req, 5);
+      req.writeUInt16BE(targetPort, 5 + hostBuf.length);
+      sock.write(req);
+    };
+
+    sock.on("connect", () => {
+      const hasAuth = Boolean(proxy.username || proxy.password);
+      const greeting = hasAuth
+        ? Buffer.from([0x05, 0x02, 0x00, 0x02])
+        : Buffer.from([0x05, 0x01, 0x00]);
+      sock.write(greeting);
+    });
+
+    const onData = (chunk) => {
+      buf = Buffer.concat([buf, chunk]);
+
+      if (stage === "greeting") {
+        if (buf.length < 2) return;
+        const ver = buf[0];
+        const method = buf[1];
+        buf = buf.subarray(2);
+        if (ver !== 0x05 || method === 0xff) {
+          fail(new Error(`SOCKS5 proxy rejected authentication method (${proxy.host}:${proxy.port})`));
+          return;
+        }
+        if (method === 0x02) {
+          stage = "auth";
+          const uBuf = Buffer.from(String(proxy.username || ""), "utf8");
+          const pBuf = Buffer.from(String(proxy.password || ""), "utf8");
+          const authPkt = Buffer.concat([
+            Buffer.from([0x01, uBuf.length]),
+            uBuf,
+            Buffer.from([pBuf.length]),
+            pBuf,
+          ]);
+          sock.write(authPkt);
+          return;
+        }
+        sendConnectCmd();
+      }
+
+      if (stage === "auth") {
+        if (buf.length < 2) return;
+        const status = buf[1];
+        buf = buf.subarray(2);
+        if (status !== 0x00) {
+          fail(new Error(`SOCKS5 proxy sai tài khoản/mật khẩu (${proxy.host}:${proxy.port})`));
+          return;
+        }
+        sendConnectCmd();
+      }
+
+      if (stage === "connect") {
+        if (buf.length < 4) return;
+        const rep = buf[1];
+        const atyp = buf[3];
+        if (rep !== 0x00) {
+          fail(new Error(`SOCKS5 CONNECT failed (code=${rep}) to ${targetHost}:${targetPort}`));
+          return;
+        }
+        let needed = 4;
+        if (atyp === 0x01) needed += 4 + 2;
+        else if (atyp === 0x04) needed += 16 + 2;
+        else if (atyp === 0x03) {
+          if (buf.length < 5) return;
+          needed += 1 + buf[4] + 2;
+        } else {
+          fail(new Error(`SOCKS5 unknown ATYP ${atyp}`));
+          return;
+        }
+        if (buf.length < needed) return;
+        const leftover = buf.subarray(needed);
+        buf = Buffer.alloc(0);
+        stage = "done";
+        settled = true;
+        clearTimeout(timer);
+        sock.removeListener("data", onData);
+        sock.removeListener("error", fail);
+        if (leftover.length > 0) {
+          sock.unshift(leftover);
+        }
+        resolve(sock);
+      }
+    };
+
+    sock.on("data", onData);
+    sock.on("error", fail);
+    sock.on("close", () => {
+      if (!settled) fail(new Error(`SOCKS5 proxy closed connection (${proxy.host}:${proxy.port})`));
+    });
+  });
+}
+
+function connectThroughHttpProxy(proxy, targetHost, targetPort, timeoutMs = 15000) {
+  return new Promise((resolve, reject) => {
+    const sock =
+      proxy.protocol === "https"
+        ? tls.connect({ host: proxy.host, port: proxy.port, servername: proxy.host, rejectUnauthorized: false })
+        : net.connect({ host: proxy.host, port: proxy.port });
+
+    let settled = false;
+    let headerBuf = Buffer.alloc(0);
+
+    const fail = (err) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      try {
+        sock.destroy();
+      } catch (_e) {}
+      reject(err);
+    };
+
+    const timer = setTimeout(() => {
+      fail(new Error(`HTTP Proxy timeout (${proxy.host}:${proxy.port})`));
+    }, timeoutMs);
+
+    const onConnected = () => {
+      const lines = [
+        `CONNECT ${targetHost}:${targetPort} HTTP/1.1`,
+        `Host: ${targetHost}:${targetPort}`,
+        "Proxy-Connection: Keep-Alive",
+      ];
+      if (proxy.username || proxy.password) {
+        const token = Buffer.from(`${proxy.username || ""}:${proxy.password || ""}`, "utf8").toString(
+          "base64"
+        );
+        lines.push(`Proxy-Authorization: Basic ${token}`);
+      }
+      lines.push("", "");
+      sock.write(lines.join("\r\n"));
+    };
+
+    if (proxy.protocol === "https") {
+      sock.once("secureConnect", onConnected);
+    } else {
+      sock.once("connect", onConnected);
+    }
+
+    const onData = (chunk) => {
+      headerBuf = Buffer.concat([headerBuf, chunk]);
+      const idx = headerBuf.indexOf("\r\n\r\n");
+      if (idx === -1) return;
+
+      const headStr = headerBuf.subarray(0, idx).toString("utf8");
+      const firstLine = headStr.split("\r\n")[0] || "";
+      const statusMatch = firstLine.match(/^HTTP\/1\.[01]\s+(\d{3})/i);
+      const statusCode = statusMatch ? Number(statusMatch[1]) : 0;
+
+      if (statusCode !== 200) {
+        fail(
+          new Error(
+            statusCode === 407
+              ? `Proxy yêu cầu xác thực hoặc sai User/Pass (HTTP 407 tại ${proxy.host}:${proxy.port})`
+              : `HTTP Proxy CONNECT thất bại (${firstLine} tại ${proxy.host}:${proxy.port})`
+          )
+        );
+        return;
+      }
+
+      const remaining = headerBuf.subarray(idx + 4);
+      headerBuf = null;
+      settled = true;
+      clearTimeout(timer);
+      sock.removeListener("data", onData);
+      sock.removeListener("error", fail);
+      if (remaining.length > 0) {
+        sock.unshift(remaining);
+      }
+      resolve(sock);
+    };
+
+    sock.on("data", onData);
+    sock.on("error", fail);
+    sock.on("close", () => {
+      if (!settled) fail(new Error(`HTTP Proxy đóng kết nối (${proxy.host}:${proxy.port})`));
+    });
+  });
+}
+
+async function connectThroughProxy(rawOrParsedProxy, targetHost, targetPort, timeoutMs = 15000) {
+  const proxy = parseProxyConfig(rawOrParsedProxy);
+  if (!proxy) {
+    throw new Error("Cấu hình Proxy không hợp lệ");
+  }
+  if (proxy.protocol === "socks5") {
+    return connectThroughSocks5(proxy, targetHost, targetPort, timeoutMs);
+  }
+  return connectThroughHttpProxy(proxy, targetHost, targetPort, timeoutMs);
+}
+
+/**
+ * Performs an HTTP/HTTPS fetch request either directly or through the given per-account proxy.
+ */
+async function proxyFetch(urlStr, options = {}, rawOrParsedProxy = null, redirectCount = 0) {
+  const proxy = parseProxyConfig(rawOrParsedProxy);
+  if (!proxy) {
+    return fetch(urlStr, options);
+  }
+
+  return new Promise((resolve, reject) => {
+    let parsedUrl;
+    try {
+      parsedUrl = new URL(urlStr);
+    } catch (e) {
+      reject(e);
+      return;
+    }
+
+    const isHttps = parsedUrl.protocol === "https:";
+    const targetHost = parsedUrl.hostname;
+    const targetPort = Number(parsedUrl.port || (isHttps ? 443 : 80));
+    const method = String(options.method || "GET").toUpperCase();
+    const reqHeaders = { ...(options.headers || {}) };
+    const bodyBuf =
+      options.body !== undefined && options.body !== null
+        ? Buffer.isBuffer(options.body)
+          ? options.body
+          : Buffer.from(String(options.body), "utf8")
+        : null;
+
+    if (bodyBuf && !Object.keys(reqHeaders).some((k) => k.toLowerCase() === "content-length")) {
+      reqHeaders["Content-Length"] = String(bodyBuf.length);
+    }
+
+    const timeoutMs = 25000;
+    let settled = false;
+    const doneReject = (err) => {
+      if (settled) return;
+      settled = true;
+      reject(err);
+    };
+
+    connectThroughProxy(proxy, targetHost, targetPort, timeoutMs)
+      .then((tunnelSock) => {
+        const reqOptions = {
+          host: targetHost,
+          port: targetPort,
+          method,
+          path: `${parsedUrl.pathname || "/"}${parsedUrl.search || ""}`,
+          headers: reqHeaders,
+          agent: false,
+          createConnection: () =>
+            isHttps
+              ? tls.connect({
+                  socket: tunnelSock,
+                  servername: targetHost,
+                  ALPNProtocols: ["http/1.1"],
+                })
+              : tunnelSock,
+        };
+
+        const reqMod = isHttps ? https : http;
+        const req = reqMod.request(reqOptions, (res) => {
+          const status = res.statusCode || 0;
+          const loc = res.headers.location;
+          if ([301, 302, 303, 307, 308].includes(status) && loc && redirectCount < 4) {
+            res.resume();
+            const nextParsed = new URL(loc, parsedUrl);
+            // Refuse an https -> http downgrade; it would expose credentials in clear text.
+            if (parsedUrl.protocol === "https:" && nextParsed.protocol === "http:") {
+              doneReject(new Error(`Refusing insecure redirect to ${nextParsed.origin}`));
+              return;
+            }
+            // Drop cookies/token/proxy-auth when the redirect leaves the origin.
+            const crossOrigin = nextParsed.origin !== parsedUrl.origin;
+            const nextHeaders = crossOrigin
+              ? stripCredentialHeaders(options.headers)
+              : options.headers;
+            const nextMethod = status === 303 ? "GET" : method;
+            settled = true;
+            resolve(
+              proxyFetch(
+                nextParsed.toString(),
+                {
+                  ...options,
+                  headers: nextHeaders,
+                  method: nextMethod,
+                  body: status === 303 ? undefined : options.body,
+                },
+                proxy,
+                redirectCount + 1
+              )
+            );
+            return;
+          }
+
+          const chunks = [];
+          res.on("data", (c) => chunks.push(c));
+          res.on("end", () => {
+            if (settled) return;
+            settled = true;
+            const fullBuf = Buffer.concat(chunks);
+            const rawSetCookie = res.headers["set-cookie"] || [];
+            const setCookieArr = Array.isArray(rawSetCookie)
+              ? rawSetCookie
+              : rawSetCookie
+              ? [String(rawSetCookie)]
+              : [];
+
+            resolve({
+              ok: status >= 200 && status < 300,
+              status,
+              headers: {
+                get: (name) => {
+                  const v = res.headers[String(name || "").toLowerCase()];
+                  return Array.isArray(v) ? v.join(", ") : v || null;
+                },
+                getSetCookie: () => setCookieArr,
+              },
+              text: async () => fullBuf.toString("utf8"),
+              json: async () => JSON.parse(fullBuf.toString("utf8")),
+              arrayBuffer: async () =>
+                fullBuf.buffer.slice(fullBuf.byteOffset, fullBuf.byteOffset + fullBuf.byteLength),
+            });
+          });
+          res.on("error", doneReject);
+        });
+
+        req.setTimeout(timeoutMs, () => {
+          req.destroy(new Error(`Request timeout via proxy ${proxy.label}`));
+        });
+        req.on("error", doneReject);
+        if (bodyBuf && bodyBuf.length > 0) {
+          req.write(bodyBuf);
+        }
+        req.end();
+      })
+      .catch(doneReject);
+  });
+}
+
+const _localProxyBridges = new Map();
+
+/**
+ * Creates a lightweight local 127.0.0.1 HTTP proxy bridge for Chrome `--proxy-server=http://127.0.0.1:<port>`
+ * so Chrome can transparently use authenticated HTTP or SOCKS5 proxies without any username/password popup.
+ */
+async function getOrCreateLocalProxyBridge(rawProxy) {
+  const proxy = parseProxyConfig(rawProxy);
+  if (!proxy) return null;
+
+  const existing = _localProxyBridges.get(proxy.raw);
+  if (existing && existing.server && existing.server.listening) {
+    return existing.localUrl;
+  }
+
+  return new Promise((resolve, reject) => {
+    const server = http.createServer((clientReq, clientRes) => {
+      try {
+        const u = new URL(clientReq.url);
+        const targetHost = u.hostname;
+        const targetPort = Number(u.port || 80);
+        connectThroughProxy(proxy, targetHost, targetPort, 15000)
+          .then((upstreamSock) => {
+            const pathWithQuery = `${u.pathname || "/"}${u.search || ""}`;
+            const hdrLines = [`${clientReq.method} ${pathWithQuery} HTTP/1.1`];
+            for (const [k, v] of Object.entries(clientReq.headers || {})) {
+              if (k.toLowerCase().startsWith("proxy-")) continue;
+              if (Array.isArray(v)) {
+                v.forEach((val) => hdrLines.push(`${k}: ${val}`));
+              } else if (v !== undefined) {
+                hdrLines.push(`${k}: ${v}`);
+              }
+            }
+            hdrLines.push("", "");
+            upstreamSock.write(hdrLines.join("\r\n"));
+            clientReq.pipe(upstreamSock);
+            upstreamSock.pipe(clientRes.socket);
+          })
+          .catch(() => {
+            try {
+              clientRes.writeHead(502);
+              clientRes.end("Bad Gateway");
+            } catch (_e) {}
+          });
+      } catch (_e) {
+        try {
+          clientRes.writeHead(400);
+          clientRes.end();
+        } catch (_e2) {}
+      }
+    });
+
+    server.on("connect", (req, clientSocket, head) => {
+      const [targetHost, portStr] = String(req.url || "").split(":");
+      const targetPort = Number(portStr || 443);
+      connectThroughProxy(proxy, targetHost, targetPort, 15000)
+        .then((upstreamSock) => {
+          clientSocket.write("HTTP/1.1 200 Connection Established\r\n\r\n");
+          if (head && head.length > 0) {
+            upstreamSock.write(head);
+          }
+          upstreamSock.pipe(clientSocket);
+          clientSocket.pipe(upstreamSock);
+          upstreamSock.on("error", () => clientSocket.destroy());
+          clientSocket.on("error", () => upstreamSock.destroy());
+        })
+        .catch(() => {
+          try {
+            clientSocket.write("HTTP/1.1 502 Bad Gateway\r\n\r\n");
+            clientSocket.destroy();
+          } catch (_e) {}
+        });
+    });
+
+    server.on("error", (err) => reject(err));
+    server.listen(0, "127.0.0.1", () => {
+      const addr = server.address();
+      const localUrl = `http://127.0.0.1:${addr.port}`;
+      _localProxyBridges.set(proxy.raw, { server, port: addr.port, localUrl, proxy });
+      resolve(localUrl);
+    });
+  });
+}
+
+async function testProxyConnection(rawProxy) {
+  const proxy = parseProxyConfig(rawProxy);
+  if (!proxy) {
+    throw new Error(
+      "Định dạng Proxy không hợp lệ. Hỗ trợ: host:port:user:pass, http://user:pass@host:port, hoặc socks5://user:pass@host:port"
+    );
+  }
+  const t0 = Date.now();
+  const res = await proxyFetch(
+    "https://api.ipify.org?format=json",
+    {
+      method: "GET",
+      headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0" },
+    },
+    proxy
+  );
+  if (!res.ok) {
+    throw new Error(`Proxy trả về HTTP ${res.status}`);
+  }
+  const data = await res.json().catch(() => ({}));
+  const ip = String(data.ip || "").trim();
+  if (!ip) {
+    throw new Error("Không đọc được địa chỉ IP từ Proxy");
+  }
+  return {
+    ok: true,
+    ip,
+    latencyMs: Date.now() - t0,
+    label: proxy.label,
+    protocol: proxy.protocol,
+  };
+}
+
 // ==================== BINARY WEBSOCKET OVER TLS CLIENT ====================
 
 class BinaryWebSocketClient {
   constructor(urlStr, options = {}) {
     this.url = new URL(urlStr);
     this.headers = options.headers || {};
+    this.proxy = parseProxyConfig(options.proxy || null);
     this.socket = null;
     this.connected = false;
     this.closed = false;
@@ -553,23 +1139,34 @@ class BinaryWebSocketClient {
   }
 
   async connect(timeoutMs = 20000) {
-    return new Promise((resolve, reject) => {
-      const host = this.url.hostname;
-      const port = Number(this.url.port || (this.url.protocol === "wss:" ? 443 : 80));
-      const pathWithQuery = `${this.url.pathname || "/"}${this.url.search || ""}`;
-      const wsKey = crypto.randomBytes(16).toString("base64");
+    const host = this.url.hostname;
+    const port = Number(this.url.port || (this.url.protocol === "wss:" ? 443 : 80));
+    const pathWithQuery = `${this.url.pathname || "/"}${this.url.search || ""}`;
+    const wsKey = crypto.randomBytes(16).toString("base64");
 
+    let rawTunnelSock = null;
+    if (this.proxy) {
+      rawTunnelSock = await connectThroughProxy(this.proxy, host, port, timeoutMs);
+    }
+
+    return new Promise((resolve, reject) => {
       const timer = setTimeout(() => {
         this.close();
         reject(new Error(`WebSocket connection timeout (${timeoutMs}ms) to ${host}`));
       }, timeoutMs);
 
-      const sock = tls.connect({
-        host,
-        port,
-        servername: host,
-        ALPNProtocols: ["http/1.1"],
-      });
+      const sock = rawTunnelSock
+        ? tls.connect({
+            socket: rawTunnelSock,
+            servername: host,
+            ALPNProtocols: ["http/1.1"],
+          })
+        : tls.connect({
+            host,
+            port,
+            servername: host,
+            ALPNProtocols: ["http/1.1"],
+          });
       this.socket = sock;
 
       let handshakeDone = false;
@@ -870,8 +1467,7 @@ function absorbSetCookieHeaders(res, cookieMap) {
 
 function buildBrowserHeaders(cookieMap, extra = {}) {
   return {
-    "User-Agent":
-      "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+    "User-Agent": BROWSER_UA,
     Accept: "application/json, text/plain, */*",
     "Accept-Language": "en-US,en;q=0.9,vi;q=0.8",
     Origin: MUSE_WEB,
@@ -888,6 +1484,7 @@ class MuseGateway {
   constructor(account, options = {}) {
     this.account = account;
     this.store = options.store || null;
+    this.proxy = parseProxyConfig(options.proxy || account?.proxy || "");
     this.cookieMap = buildCookieMapFromAccount(account);
     this.deviceId = account?.device_id || crypto.randomUUID();
     this.vmId = account?.vm_id || "";
@@ -902,6 +1499,10 @@ class MuseGateway {
     this._readLock = Promise.resolve();
     this._transportChunks = new Map();
     this._streamFrames = new Map();
+  }
+
+  _fetch(urlStr, options = {}) {
+    return proxyFetch(urlStr, options, this.proxy);
   }
 
   _persistCookiesIfNeeded() {
@@ -930,7 +1531,7 @@ class MuseGateway {
     // 1. GET /api/session
     let sessionData = null;
     for (let attempt = 0; attempt < 5; attempt += 1) {
-      const r1 = await fetch(`${MUSE_WEB}/api/session`, {
+      const r1 = await this._fetch(`${MUSE_WEB}/api/session`, {
         method: "GET",
         headers: buildBrowserHeaders(this.cookieMap),
         signal: AbortSignal.timeout(15000),
@@ -960,7 +1561,7 @@ class MuseGateway {
       // If VM is restarting or sleeping, wake it and retry
       const candidateVmId = sessionData?.vm_id || this.vmId;
       if (candidateVmId) {
-        await fetch(`${MUSE_WEB}/api/hatch/vm/wake`, {
+        await this._fetch(`${MUSE_WEB}/api/hatch/vm/wake`, {
           method: "POST",
           headers: buildBrowserHeaders(this.cookieMap, {
             "Content-Type": "application/json",
@@ -987,7 +1588,7 @@ class MuseGateway {
 
     // Always wake VM if not RUNNING
     if (this.vmState !== "RUNNING") {
-      const rw = await fetch(`${MUSE_WEB}/api/hatch/vm/wake`, {
+      const rw = await this._fetch(`${MUSE_WEB}/api/hatch/vm/wake`, {
         method: "POST",
         headers: buildBrowserHeaders(this.cookieMap, {
           "Content-Type": "application/json",
@@ -1006,7 +1607,7 @@ class MuseGateway {
     }
 
     // 2. POST /api/auth/check -> access_token
-    const rAuth = await fetch(`${MUSE_WEB}/api/auth/check`, {
+    const rAuth = await this._fetch(`${MUSE_WEB}/api/auth/check`, {
       method: "POST",
       headers: buildBrowserHeaders(this.cookieMap, {
         "Content-Length": "0",
@@ -1028,7 +1629,7 @@ class MuseGateway {
     this.accessToken = authJson.access_token;
 
     // 3. POST /api/hatch/token -> hatch gateway token
-    const rHatch = await fetch(`${MUSE_WEB}/api/hatch/token`, {
+    const rHatch = await this._fetch(`${MUSE_WEB}/api/hatch/token`, {
       method: "POST",
       headers: buildBrowserHeaders(this.cookieMap, {
         Authorization: `Bearer ${this.accessToken}`,
@@ -1068,6 +1669,7 @@ class MuseGateway {
     // Connect WebSocket & perform 3-message Noise_XX_25519_AESGCM_SHA256 handshake
     for (let attempt = 0; attempt < 3; attempt += 1) {
       const ws = new BinaryWebSocketClient(wsUrl, {
+        proxy: this.proxy,
         headers: {
           Origin: MUSE_WEB,
         },
@@ -1095,7 +1697,7 @@ class MuseGateway {
         ws.close();
         if (attempt === 2) throw err;
         // Wake VM and refresh token if connection reset
-        await fetch(`${MUSE_WEB}/api/hatch/vm/wake`, {
+        await this._fetch(`${MUSE_WEB}/api/hatch/vm/wake`, {
           method: "POST",
           headers: buildBrowserHeaders(this.cookieMap, {
             Authorization: `Bearer ${this.accessToken}`,
@@ -1765,12 +2367,20 @@ class MuseGateway {
       if (lastPartial) return lastPartial;
     }
 
-    // 3. Direct HTTPS URL fallback
+    // 3. Direct HTTPS URL fallback — only send session cookies/token to muse.ai
+    // hosts, so a foreign (or redirected) media URL can't exfiltrate them.
     if (/^https?:\/\//i.test(rawUrl)) {
-      const res = await fetch(rawUrl, {
-        headers: buildBrowserHeaders(this.cookieMap, {
-          ...(this.accessToken ? { Authorization: `Bearer ${this.accessToken}` } : {}),
-        }),
+      let urlHost = "";
+      try {
+        urlHost = new URL(rawUrl).hostname;
+      } catch (_e) {}
+      const headers = isMuseHost(urlHost)
+        ? buildBrowserHeaders(this.cookieMap, {
+            ...(this.accessToken ? { Authorization: `Bearer ${this.accessToken}` } : {}),
+          })
+        : { "User-Agent": BROWSER_UA, Accept: "*/*" };
+      const res = await this._fetch(rawUrl, {
+        headers,
         signal: AbortSignal.timeout(180000),
       });
       if (res.ok) {
@@ -1933,4 +2543,11 @@ module.exports = {
   decodeServiceResponseFrame,
   inspectHistoryEvent,
   getRoutesMap,
+  parseProxyConfig,
+  connectThroughProxy,
+  proxyFetch,
+  getOrCreateLocalProxyBridge,
+  testProxyConnection,
+  isMuseHost,
+  stripCredentialHeaders,
 };

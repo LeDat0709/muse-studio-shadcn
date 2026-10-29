@@ -12,7 +12,12 @@ const {
   getBrowserWsUrl,
   closeTarget,
 } = require("./cdp");
-const { MuseGateway, inspectHistoryEvent } = require("./gateway");
+const {
+  MuseGateway,
+  inspectHistoryEvent,
+  getOrCreateLocalProxyBridge,
+  parseProxyConfig,
+} = require("./gateway");
 
 const MUSE_URL = "https://muse.ai";
 const MUSE_NEW_THREAD = "https://muse.ai/thread/new";
@@ -210,6 +215,9 @@ function mediaExtFor(mime, expect) {
 
 const MEDIA_DOWNLOAD_TIMEOUT_MS = 10 * 60 * 1000;
 const PROMPT_INPUT_WAIT_MS = 20000;
+// Abort a job after this many back-to-back history-poll failures instead of
+// polling a dead socket blindly until the (up to 900s+) deadline (H9).
+const MAX_CONSECUTIVE_POLL_FAILURES = 5;
 
 // Where the tab is and what it shows, for errors that would otherwise say only "no textarea".
 const JS_PAGE_SNAPSHOT = `
@@ -318,6 +326,7 @@ class MuseEngine {
     this._chromeLaunchPromise = null;
     this._chromeLaunchPromises = new Map();
     this.portModes = new Map();
+    this.portProxies = new Map();
     this.knownCdpPorts = new Set([this.cdpPort]);
     this.pendingLoginPorts = new Set();
     this._openTabChain = Promise.resolve();
@@ -435,7 +444,7 @@ class MuseEngine {
    * Launches Chrome in Headless (--headless=new) mode by default, or visibly when requested!
    * Serialized per port so concurrent streams/logins never spawn duplicate processes on the same port.
    */
-  async ensureChrome(forceVisible = false, customPort = null, slotHint = null) {
+  async ensureChrome(forceVisible = false, customPort = null, slotHint = null, proxyOverride = null) {
     if (this._autoCloseChromeTimer) {
       clearTimeout(this._autoCloseChromeTimer);
       this._autoCloseChromeTimer = null;
@@ -446,7 +455,7 @@ class MuseEngine {
     if (existingPromise) {
       return existingPromise;
     }
-    const p = this._ensureChromeInternal(forceVisible, targetPort, slotHint).finally(() => {
+    const p = this._ensureChromeInternal(forceVisible, targetPort, slotHint, proxyOverride).finally(() => {
       this._chromeLaunchPromises.delete(targetPort);
       if (targetPort === this.cdpPort) {
         this._chromeLaunchPromise = null;
@@ -459,17 +468,36 @@ class MuseEngine {
     return p;
   }
 
-  async _ensureChromeInternal(forceVisible = false, targetPort = this.cdpPort, slotHint = null) {
+  async _ensureChromeInternal(
+    forceVisible = false,
+    targetPort = this.cdpPort,
+    slotHint = null,
+    proxyOverride = null
+  ) {
     const port = Number(targetPort || this.cdpPort);
     const profileDir = this._getProfileDirForPort(port);
     const isVisibleMode =
       Boolean(forceVisible) ||
       Boolean(this.store.settings && this.store.settings.showChromeWindow === true);
 
+    const accForPort = (this.store.accounts || []).find(
+      (a) => Number(a.cdp_port || this.cdpPort) === port
+    );
+    const rawProxy = String(
+      proxyOverride !== null && proxyOverride !== undefined
+        ? proxyOverride
+        : accForPort?.proxy || ""
+    ).trim();
+
     if (await this.isChromeAlive(port)) {
       const currentMode = this.portModes.get(port);
-      if (isVisibleMode && currentMode === "headless") {
-        this.log(`Chuyển cổng CDP :${port} từ Chế độ Ngầm (Headless) sang Chế độ Hiển thị...`);
+      const currentProxy = this.portProxies.get(port) || "";
+      if ((isVisibleMode && currentMode === "headless") || currentProxy !== rawProxy) {
+        this.log(
+          `Khởi động lại cổng CDP :${port} để áp dụng ${
+            currentProxy !== rawProxy ? "cấu hình Proxy mới" : "Chế độ Hiển thị"
+          }...`
+        );
         await this._closeBrowserOnPort(port);
       } else {
         return true;
@@ -519,6 +547,17 @@ class MuseEngine {
       `--window-position=${initBounds.left},${initBounds.top}`,
     ];
 
+    if (rawProxy) {
+      const bridgeUrl = await getOrCreateLocalProxyBridge(rawProxy).catch(() => null);
+      if (bridgeUrl) {
+        args.push(`--proxy-server=${bridgeUrl}`);
+        const parsedP = parseProxyConfig(rawProxy);
+        this.log(
+          `[Proxy Cổng :${port}] Đã gắn Proxy riêng (${parsedP ? parsedP.label : rawProxy}) qua cầu nối cục bộ ${bridgeUrl}`
+        );
+      }
+    }
+
     if (!isVisibleMode) {
       args.push("--headless=new", "--hide-scrollbars", "--mute-audio");
     }
@@ -542,6 +581,7 @@ class MuseEngine {
       await new Promise((r) => setTimeout(r, 500));
       if (await this.isChromeAlive(port)) {
         this.portModes.set(port, isVisibleMode ? "visible" : "headless");
+        this.portProxies.set(port, rawProxy);
         this.log(
           `Đã kết nối Engine CDP cổng :${port} (${isVisibleMode ? "Visible" : "Headless 100%"}) thành công!`
         );
@@ -1011,11 +1051,16 @@ foreach ($p in $procs) {
   async loginWithBrowser({
     accountName = "",
     accountId = "",
+    proxy = "",
     forceNewProfile = false,
     slotOffset = 0,
     timeoutSec = 240,
   } = {}) {
     const existingAcc = accountId ? this.store.getAccount(accountId) : null;
+    const effectiveProxy = String(proxy || existingAcc?.proxy || "").trim();
+    if (existingAcc && proxy !== undefined && String(proxy).trim()) {
+      this.store.updateAccountProxy(existingAcc.id, String(proxy).trim());
+    }
 
     // First, sync port 9225 if it already has an active session so Account #1 is never lost
     if (!existingAcc && !this.pendingLoginPorts.has(this.cdpPort)) {
@@ -1050,7 +1095,7 @@ foreach ($p in $procs) {
 
     let cdp = null;
     try {
-      await this.ensureChrome(true, targetPort, gridSlot);
+      await this.ensureChrome(true, targetPort, gridSlot, effectiveProxy);
       await this.bringChromeToFront({ saveSetting: true, targetPort });
 
       const targets = await getTargets(this.cdpHost, targetPort);
@@ -1276,6 +1321,7 @@ foreach ($p in $procs) {
       const { account, isNew } = this.store.addAccount(finalName, normalized, detectedEmail, {
         accountId: existingAcc ? existingAcc.id : "",
         cdpPort: targetPort,
+        proxy: effectiveProxy,
         forceNew: isAddingNewAccount,
       });
       this.store.markLive(account.id, { vm_state: vmState });
@@ -1431,6 +1477,9 @@ foreach ($p in $procs) {
     });
 
     const cdp = new CDPClient(pageTarget.webSocketDebuggerUrl);
+    // The tab/slot are already reserved above. If anything below throws, the caller
+    // never gets a session to close, so release everything here and rethrow (H7).
+    try {
     await cdp.connect();
     await cdp.send("Network.enable");
     await cdp.send("Page.enable");
@@ -1581,6 +1630,12 @@ foreach ($p in $procs) {
     }
 
     return { cdp, targetId: pageTarget.id, cdpPort: accPort, createdNewTab, streamSlot };
+    } catch (err) {
+      await this._closeSessionPage({ cdp, targetId: pageTarget.id, cdpPort: accPort }).catch(
+        () => {}
+      );
+      throw err;
+    }
   }
 
   async _closeSessionPage(session) {
@@ -2198,6 +2253,11 @@ foreach ($p in $procs) {
       await pipeline(Readable.fromWeb(res.body), fs.createWriteStream(fullPath));
       const size = fs.statSync(fullPath).size;
       if (!size) throw new Error("file rỗng");
+      // Catch a cut-off download: if the server told us the length, it must match.
+      const expectedLen = Number(res.headers.get("content-length") || 0);
+      if (expectedLen > 0 && size < expectedLen) {
+        throw new Error(`file cụt: ${size}/${expectedLen} bytes`);
+      }
       return { filename, mime, size };
     } catch (err) {
       if (fullPath) fs.rmSync(fullPath, { force: true });
@@ -2266,7 +2326,17 @@ foreach ($p in $procs) {
             .catch(() => {});
 
           const fullB64 = chunks.join("");
+          // A chunk comes back "" when the page navigated and the store key vanished mid-read.
+          // Verify we got every expected base64 char, then that the bytes form a complete file,
+          // so a truncated read retries this attempt instead of being saved as success (H8).
+          if (fullB64.length !== meta.b64Len) {
+            throw new Error(`dữ liệu cụt: ${fullB64.length}/${meta.b64Len} ký tự base64`);
+          }
           const buf = Buffer.from(fullB64, "base64");
+          if (!buf.length) throw new Error("file rỗng");
+          if (expect === "video" && isUnfinishedMp4(buf)) {
+            throw new Error("video MP4 chưa hoàn tất (thiếu moov hoặc bị cụt)");
+          }
           const filename = reserveUniqueFile(this.store.mediaDir, base, mediaExtFor(meta.mime, expect));
           fs.writeFileSync(path.join(this.store.mediaDir, filename), buf);
           return result(filename, meta.mime, buf.length, fullB64);
@@ -2424,8 +2494,10 @@ foreach ($p in $procs) {
       }
     };
 
-    this.activeCount += 1;
+    // Construct the gateway BEFORE bumping activeCount: if the constructor throws,
+    // we're still outside the try/finally, so a premature increment would leak forever.
     const gw = new MuseGateway(account, { store: this.store });
+    this.activeCount += 1;
     const runner = {
       taskId: task.id,
       rowId: rowId || "",
@@ -2456,9 +2528,13 @@ foreach ($p in $procs) {
 
     try {
       checkCancelled();
-      reportProgress(10, "Đang xác thực HTTP & kết nối cổng Noise-XX Gateway (Không dùng CDP)...");
+      const proxyNote = gw.proxy ? ` · Proxy ${gw.proxy.label}` : "";
+      reportProgress(
+        10,
+        `Đang xác thực HTTP & kết nối cổng Noise-XX Gateway${proxyNote} (Không dùng CDP)...`
+      );
       this.log(
-        `[${account.name}] [HTTP + Noise-XX Gateway] Bắt đầu tạo ${expect.toUpperCase()} (${aspectRatio}, ${
+        `[${account.name}] [HTTP + Noise-XX Gateway${proxyNote}] Bắt đầu tạo ${expect.toUpperCase()} (${aspectRatio}, ${
           expect === "video" ? `${targetDurationSec}s${isLongVideo ? " [Ghép đa cảnh]" : ""}, ` : ""
         }${qUpper}): "${cleanPrompt.slice(0, 60)}..."`
       );
@@ -2506,7 +2582,9 @@ foreach ($p in $procs) {
       const taskSendStartMs = Date.now();
       let minTaskOccurredAtMs = taskSendStartMs - 1000;
 
-      const initHist = await gw.getHistory({ sessionId, limit: 30 }).catch(() => []);
+      // Baseline must succeed: if it silently returned [], every pre-existing VM file
+      // would look "new" and the job could pick up stale media. Let a failure abort (H9).
+      const initHist = await gw.getHistory({ sessionId, limit: 30 });
       for (const ev of initHist) {
         if (ev?.message_id) baselineMsgIds.add(ev.message_id);
         const info = inspectHistoryEvent(ev);
@@ -2517,7 +2595,7 @@ foreach ($p in $procs) {
           baselineMediaKeys.add(`${r.url || ""}|${r.path || ""}|${r.id || ""}`);
         }
       }
-      const initFiles = await gw.listGeneratedFiles().catch(() => []);
+      const initFiles = await gw.listGeneratedFiles();
       for (const f of initFiles) {
         baselineMediaKeys.add(`${f.url || ""}|${f.path || ""}|${f.id || ""}|${f.mtimeMs || 0}`);
         baselineMediaKeys.add(`${f.url || ""}|${f.path || ""}|${f.id || ""}`);
@@ -2570,6 +2648,7 @@ foreach ($p in $procs) {
       const handledAssistantTurnIds = new Set();
       const preStitchMediaKeys = new Set();
       let lastSeenAssistantText = "";
+      let consecutivePollFailures = 0;
 
       while (Date.now() < deadline) {
         checkCancelled();
@@ -2578,7 +2657,17 @@ foreach ($p in $procs) {
         const elapsedSec = Math.round((Date.now() - tStart) / 1000);
         const progPct = Math.min(92, Math.round(36 + elapsedSec * 0.45));
 
-        const events = await gw.getHistory({ sessionId, limit: 40 }).catch(() => []);
+        let events;
+        try {
+          events = await gw.getHistory({ sessionId, limit: 40 });
+          consecutivePollFailures = 0;
+        } catch (pollErr) {
+          consecutivePollFailures += 1;
+          if (consecutivePollFailures >= MAX_CONSECUTIVE_POLL_FAILURES) {
+            throw new Error(`Mất kết nối Gateway khi theo dõi tiến trình: ${pollErr.message}`);
+          }
+          continue;
+        }
         checkCancelled();
         const newMediaCandidates = [];
         const assistantReplies = [];
