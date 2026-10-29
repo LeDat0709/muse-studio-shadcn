@@ -177,9 +177,9 @@
               <div class="compose-section">
                 <div class="seg seg-wide" role="radiogroup" aria-label="Loại media">
                   <input type="radio" name="bulkModeTab" id="bulkModeTabVideo" value="video" checked />
-                  <label for="bulkModeTabVideo">Tạo video</label>
+                  <label for="bulkModeTabVideo"><svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 4"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>Tạo video</label>
                   <input type="radio" name="bulkModeTab" id="bulkModeTabImage" value="image" />
-                  <label for="bulkModeTabImage">Tạo ảnh</label>
+                  <label for="bulkModeTabImage"><svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>Tạo ảnh</label>
                 </div>
                 <select id="bulkModeSelect" class="select" hidden>
                       <option value="video" selected>Tạo Video AI</option>
@@ -189,7 +189,7 @@
 
               <div class="compose-section">
                 <div class="compose-head">
-                  <span class="compose-title">Prompt</span>
+                  <span class="compose-title"><svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><polyline points="4 7 4 4 20 4 20 7"/><line x1="9" x2="15" y1="20" y2="20"/><line x1="12" x2="12" y1="4" y2="20"/></svg>Prompt</span>
                   <button class="btn btn-sm" id="btnResetDefaultPrompts" type="button" style="padding: 0 8px; font-size: 11px">
                     <svg aria-hidden="true" class="lucide" width="11.5" height="11.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                     <span>Mẫu mặc định</span>
@@ -228,7 +228,7 @@
 
               <div class="compose-section" id="productDropZone">
                 <div class="compose-head">
-                  <span class="compose-title">Ảnh tham chiếu</span>
+                  <span class="compose-title"><svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><path d="M18 22H4a2 2 0 0 1-2-2V6"/><path d="m22 13-1.296-1.296a2.41 2.41 0 0 0-3.408 0L11 18"/><circle cx="12" cy="8" r="2"/><rect width="16" height="16" x="6" y="2" rx="2"/></svg>Ảnh tham chiếu</span>
                   <span class="bulk-panel-badge" id="bulkProductCountBadge">0 SP (0 luồng) · &gt;10s tự ghép</span>
                 </div>
                 <p class="compose-note">Kéo thả ảnh sản phẩm vào đây, mỗi sản phẩm thành một luồng.</p>
@@ -261,7 +261,7 @@
               </div>
 
               <div class="compose-section">
-                <span class="compose-title" id="bulkAspectLabel">Tỉ lệ khung</span>
+                <span class="compose-title" id="bulkAspectLabel"><svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="M12 9v11"/><path d="M2 9h13a2 2 0 0 1 2 2v9"/></svg>Tỉ lệ khung</span>
                 <div class="seg seg-wrap" role="radiogroup" aria-labelledby="bulkAspectLabel"><input type="radio" name="bulkAspectTab" id="bulkAspectTab0" value="9:16" checked /><label for="bulkAspectTab0">9:16</label><input type="radio" name="bulkAspectTab" id="bulkAspectTab1" value="16:9" /><label for="bulkAspectTab1">16:9</label><input type="radio" name="bulkAspectTab" id="bulkAspectTab2" value="1:1" /><label for="bulkAspectTab2">1:1</label><input type="radio" name="bulkAspectTab" id="bulkAspectTab3" value="4:3" /><label for="bulkAspectTab3">4:3</label><input type="radio" name="bulkAspectTab" id="bulkAspectTab4" value="3:4" /><label for="bulkAspectTab4">3:4</label></div>
                 <select id="bulkAspectSelect" class="select" hidden>
                       <option value="9:16">9:16 (Dọc)</option>
@@ -273,7 +273,7 @@
               </div>
 
               <details class="compose-section compose-advanced">
-                <summary>Nâng cao: thời lượng, độ phân giải, số luồng, tài khoản</summary>
+                <summary><svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>Nâng cao: thời lượng, độ phân giải, số luồng, tài khoản</summary>
                 <div class="compose-grid">
                   <div><label class="field-label" for="bulkDurationSelect">Thời lượng video</label><select id="bulkDurationSelect" class="select">
                       <option value="5s">5 giây (Đơn)</option>
@@ -332,11 +332,11 @@
                 </select>
                 <div class="seg" role="radiogroup" aria-label="Kiểu xem hàng đợi">
                   <input type="radio" name="queueView" id="queueViewList" value="list" checked />
-                  <label for="queueViewList">Danh sách</label>
+                  <label for="queueViewList"><svg aria-hidden="true" class="lucide" width="12.5" height="12.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/></svg>Danh sách</label>
                   <input type="radio" name="queueView" id="queueViewGrid" value="grid" />
-                  <label for="queueViewGrid">Lưới</label>
+                  <label for="queueViewGrid"><svg aria-hidden="true" class="lucide" width="12.5" height="12.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><rect width="7" height="7" x="3" y="3" rx="1"/><rect width="7" height="7" x="14" y="3" rx="1"/><rect width="7" height="7" x="14" y="14" rx="1"/><rect width="7" height="7" x="3" y="14" rx="1"/></svg>Lưới</label>
                   <input type="radio" name="queueView" id="queueViewTable" value="table" />
-                  <label for="queueViewTable">Bảng</label>
+                  <label for="queueViewTable"><svg aria-hidden="true" class="lucide" width="12.5" height="12.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M12 3v18"/><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>Bảng</label>
                 </div>
                 <button class="btn btn-brand btn-sm" id="btnQueueAddRow" type="button" title="Thêm nhanh 1 luồng prompt mới vào hàng đợi">
                   <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
@@ -349,11 +349,26 @@
                   <span id="queueCount">0 luồng</span>
                 </label>
                 <div class="queue-bulk-pills">
-                  <button class="btn btn-sm" id="btnSelectAllRows" type="button" title="Chọn toàn bộ luồng">Tất cả</button>
-                  <button class="btn btn-sm" id="btnUnselectAll" type="button" title="Bỏ chọn toàn bộ luồng">Bỏ chọn</button>
-                  <button class="btn btn-sm" id="btnSelectRunning" type="button" title="Chọn các luồng đang chạy">Đang chạy</button>
-                  <button class="btn btn-sm" id="btnSelectPending" type="button" title="Chọn các luồng chưa chạy">Chưa chạy</button>
-                  <button class="btn btn-sm" id="btnSelectErrored" type="button" title="Chọn các luồng bị lỗi">Lỗi</button>
+                  <button class="btn btn-sm" id="btnSelectAllRows" type="button" title="Chọn toàn bộ luồng">
+                    <svg aria-hidden="true" class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></svg>
+                    <span>Tất cả</span>
+                  </button>
+                  <button class="btn btn-sm" id="btnUnselectAll" type="button" title="Bỏ chọn toàn bộ luồng">
+                    <svg aria-hidden="true" class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m15 9-6 6"/><path d="m9 9 6 6"/></svg>
+                    <span>Bỏ chọn</span>
+                  </button>
+                  <button class="btn btn-sm" id="btnSelectRunning" type="button" title="Chọn các luồng đang chạy">
+                    <svg aria-hidden="true" class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>
+                    <span>Đang chạy</span>
+                  </button>
+                  <button class="btn btn-sm" id="btnSelectPending" type="button" title="Chọn các luồng chưa chạy">
+                    <svg aria-hidden="true" class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>Chưa chạy</span>
+                  </button>
+                  <button class="btn btn-sm" id="btnSelectErrored" type="button" title="Chọn các luồng bị lỗi">
+                    <svg aria-hidden="true" class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
+                    <span>Lỗi</span>
+                  </button>
                   <button class="btn btn-soft btn-sm" id="btnBulkApplyPrompt" type="button" title="Ghi đè Prompt & Cấu hình cột trái vào tất cả các luồng đang tích chọn">
                     <svg aria-hidden="true" class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                     <span>Sửa hàng loạt</span>
@@ -411,8 +426,16 @@
               </div>
             </div>
             <div class="topbar-actions">
-              <div style="display: inline-flex; align-items: center; gap: 5px">
-                <select id="multiLoginCountSelect" class="select select-compact" style="width: 122px">
+              <div style="display: inline-flex; align-items: center; gap: 5px; flex-wrap: wrap">
+                <input
+                  type="text"
+                  id="loginProxyInput"
+                  class="input"
+                  style="width: 220px; height: 32px; font-size: 11.5px"
+                  placeholder="Proxy ních mới (host:port:user:pass)…"
+                  title="Tùy chọn: Gắn Proxy riêng cho Chrome khi mở đăng nhập ních mới"
+                />
+                <select id="multiLoginCountSelect" class="select select-compact" style="width: 122px; height: 32px">
                   <option value="1" selected>1 ních mới</option>
                   <option value="2">2 ních cùng lúc</option>
                   <option value="3">3 ních cùng lúc</option>
@@ -439,17 +462,28 @@
               <div class="card-title">
                 <span class="card-title-left">
                   <svg aria-hidden="true" class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
-                  <span>Nhập Cookie thủ công (JSON Cookie-Editor hoặc Header String)</span>
+                  <span>Nhập Cookie &amp; Proxy thủ công cho từng tài khoản</span>
                 </span>
               </div>
-              <div style="margin-bottom: 8px">
-                <label class="field-label">Tên gợi nhớ tài khoản (Tùy chọn)</label>
-                <input
-                  type="text"
-                  id="accNameInput"
-                  class="input"
-                  placeholder="VD: Muse Pro #1 (Để trống tự động đặt tên)"
-                />
+              <div style="display: grid; grid-template-columns: 1fr 1.25fr; gap: 8px; margin-bottom: 8px">
+                <div>
+                  <label class="field-label">Tên gợi nhớ tài khoản (Tùy chọn)</label>
+                  <input
+                    type="text"
+                    id="accNameInput"
+                    class="input"
+                    placeholder="VD: Muse Pro #1"
+                  />
+                </div>
+                <div>
+                  <label class="field-label">Proxy riêng cho ních này (HTTP / SOCKS5)</label>
+                  <input
+                    type="text"
+                    id="accProxyInput"
+                    class="input mono"
+                    placeholder="host:port:user:pass hoặc http://... / socks5://..."
+                  />
+                </div>
               </div>
               <label class="field-label">
                 Dữ liệu Cookie (Cần có <code>hatch_sess</code>, <code>hatch_vml</code>, <code>hatch_gw</code>)
@@ -471,19 +505,26 @@
             <div class="card">
               <div class="card-title">
                 <span class="card-title-left">
-                  <svg aria-hidden="true" class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="m9 12 2 2 4-4"/></svg>
-                  <span>Cơ chế Profile Độc Lập &amp; Tự động Bảo hoạt 48h</span>
+                  <svg aria-hidden="true" class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
+                  <span>Gán Proxy Hàng Loạt (Mỗi dòng 1 Proxy cho 1 Tài khoản)</span>
                 </span>
               </div>
-              <p style="font-size: 12.5px; color: var(--muted-foreground); line-height: 1.6; margin-bottom: 8px">
-                • <strong style="color: var(--foreground)">Profile Chrome Độc Lập:</strong> Mỗi tài khoản được cấp một thư mục Profile và cổng CDP riêng biệt (<code>:9225</code>, <code>:9226</code>, <code>:9227</code>…) giúp đăng nhập nhiều tài khoản song song không bao giờ đụng độ session.
-              </p>
-              <p style="font-size: 12.5px; color: var(--muted-foreground); line-height: 1.6; margin-bottom: 8px">
-                • <strong style="color: var(--foreground)">Đồng bộ Cookie httpOnly:</strong> Tự động đọc và làm mới 4 cookie cốt lõi (<code>hatch_sess</code>, <code>hatch_vml</code>, <code>hatch_gw</code>, <code>hatch_native_auth_device</code>) trực tiếp qua giao thức WebSocket CDP.
-              </p>
-              <p style="font-size: 12.5px; color: var(--muted-foreground); line-height: 1.6">
-                • <strong style="color: var(--foreground)">Wake VM &amp; Gia hạn 48h:</strong> Định kỳ gọi <code>/api/session</code> và <code>/api/hatch/vm/wake</code> để giữ máy ảo Muse luôn ở trạng thái <code>RUNNING</code>.
-              </p>
+              <label class="field-label">
+                Hỗ trợ <code>ip:port:user:pass</code>, <code>http://user:pass@ip:port</code>, <code>socks5://user:pass@ip:port</code> (Áp dụng cho cả Gateway Noise-XX &amp; Chrome)
+              </label>
+              <textarea
+                id="bulkProxyInput"
+                class="textarea mono"
+                rows="3"
+                placeholder="103.11.22.33:8080:user1:pass1&#10;socks5://user2:pass2@45.66.77.88:1080"
+              ></textarea>
+              <div style="display: flex; gap: 8px; margin-top: 10px; align-items: center; justify-content: space-between">
+                <span style="font-size: 11.5px; color: var(--muted-foreground)">Mỗi ních chạy độc lập trên IP Proxy riêng khi tạo Video/Ảnh &amp; Mở Chrome.</span>
+                <button class="btn btn-soft" id="btnBulkAssignProxy" type="button">
+                  <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
+                  <span>Gán Proxy hàng loạt</span>
+                </button>
+              </div>
             </div>
           </div>
 
@@ -494,6 +535,7 @@
                   <tr>
                     <th>ID / Cổng CDP</th>
                     <th>Tên tài khoản / Email</th>
+                    <th>Proxy riêng (HTTP / SOCKS5)</th>
                     <th>Trạng thái</th>
                     <th>Số Cookie</th>
                     <th>Hạn Cookie (hatch_vml)</th>
@@ -899,6 +941,40 @@
                 <div style="grid-column: 1 / -1">
                   <label class="field-label">Google Gemini API Key (Dùng tạo kịch bản AI)</label>
                   <input type="password" id="setGeminiApiKey" class="input" placeholder="AIzaSy…" />
+                </div>
+              </div>
+              <div class="form-row" style="margin-bottom: 0">
+                <div style="grid-column: 1 / -1">
+                  <label class="field-label">Thư mục xuất mặc định (nhớ lại, khỏi chọn mỗi lần)</label>
+                  <div style="display: flex; gap: 6px; align-items: center">
+                    <input type="text" id="setExportDir" class="input" readonly placeholder="Chưa đặt — sẽ hỏi mỗi lần xuất" style="flex: 1" />
+                    <button class="btn btn-soft btn-sm" id="btnChooseExportDir" type="button">Chọn…</button>
+                    <button class="btn btn-sm" id="btnClearExportDir" type="button" title="Xóa thư mục mặc định">Xóa</button>
+                  </div>
+                </div>
+              </div>
+              <div class="form-row" style="margin-bottom: 0">
+                <div style="grid-column: 1 / -1">
+                  <label class="field-label">Mẫu tên file xuất (đổi tên video/ảnh khi lưu — để trống = tên tự động)</label>
+                  <input type="text" id="setOutputNameTemplate" class="input" placeholder="VD: {title}_{date} hoặc {mode}_{datetime}_{ratio}" style="font-family: var(--font-mono, monospace); font-size: 12px" />
+                  <div style="font-size: 11px; color: var(--muted-foreground); margin-top: 4px">
+                    Biến: <code>{title}</code> <code>{prompt}</code> <code>{duration}</code> <code>{ratio}</code> <code>{quality}</code> <code>{mode}</code> <code>{tag}</code> <code>{date}</code> <code>{time}</code> <code>{datetime}</code> <code>{rand}</code>. Trùng tên tự thêm "(2)". Tên bạn đặt riêng cho từng luồng vẫn được ưu tiên.
+                  </div>
+                </div>
+              </div>
+              <div class="form-row" style="margin-bottom: 0">
+                <div style="grid-column: 1 / -1">
+                  <label class="field-label">Mẫu prompt Video (để trống = dùng mẫu mặc định)</label>
+                  <textarea id="setPromptTemplateVideo" class="input" rows="3" placeholder="VD: Please generate and present a {duration}s MP4 video ({specs}) saved to /workspace/imagine_media/{output}: {prompt}" style="font-family: var(--font-mono, monospace); font-size: 12px"></textarea>
+                </div>
+              </div>
+              <div class="form-row" style="margin-bottom: 0">
+                <div style="grid-column: 1 / -1">
+                  <label class="field-label">Mẫu prompt Ảnh (để trống = dùng mẫu mặc định)</label>
+                  <textarea id="setPromptTemplateImage" class="input" rows="2" placeholder="VD: Please generate and present an image ({specs}): {prompt}" style="font-family: var(--font-mono, monospace); font-size: 12px"></textarea>
+                  <div style="font-size: 11px; color: var(--muted-foreground); margin-top: 4px">
+                    Biến thay thế: <code>{prompt}</code> <code>{duration}</code> <code>{ratio}</code> <code>{quality}</code> <code>{output}</code> <code>{clips}</code> <code>{specs}</code>. Chính sách thực thi video &amp; trích tên sản phẩm vẫn tự động được thêm vào cuối.
+                  </div>
                 </div>
               </div>
             </div>

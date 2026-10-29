@@ -12,7 +12,12 @@ const {
   getBrowserWsUrl,
   closeTarget,
 } = require("./cdp");
-const { MuseGateway, inspectHistoryEvent } = require("./gateway");
+const {
+  MuseGateway,
+  inspectHistoryEvent,
+  getOrCreateLocalProxyBridge,
+  parseProxyConfig,
+} = require("./gateway");
 
 const MUSE_URL = "https://muse.ai";
 const MUSE_NEW_THREAD = "https://muse.ai/thread/new";
@@ -198,6 +203,32 @@ function outputFileBase(name) {
   return WINDOWS_RESERVED_NAME.test(base) ? `${base}_` : base;
 }
 
+// Fills a user-defined prompt template: {prompt} {duration} {ratio} {quality}
+// {output} {clips} {specs}. Unknown placeholders are left untouched.
+function applyPromptTemplate(tpl, vars) {
+  return String(tpl || "").replace(/\{(\w+)\}/g, (m, k) =>
+    Object.prototype.hasOwnProperty.call(vars, k) ? String(vars[k]) : m
+  );
+}
+
+// Builds a saved-media base filename from a user template in Settings. Adds the
+// date/time/rand placeholders, then the caller sanitises it with outputFileBase().
+// Placeholders: {title} {prompt} {duration} {ratio} {quality} {mode} {tag}
+// {date} {time} {datetime} {rand}.
+function buildTemplatedName(template, vars) {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const ymd = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const hms = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  return applyPromptTemplate(template, {
+    date: ymd,
+    time: hms,
+    datetime: `${ymd.replace(/-/g, "")}_${hms}`,
+    rand: crypto.randomBytes(3).toString("hex"),
+    ...vars,
+  });
+}
+
 function mediaExtFor(mime, expect) {
   const m = String(mime || "").toLowerCase();
   if (m.includes("mp4")) return ".mp4";
@@ -210,6 +241,9 @@ function mediaExtFor(mime, expect) {
 
 const MEDIA_DOWNLOAD_TIMEOUT_MS = 10 * 60 * 1000;
 const PROMPT_INPUT_WAIT_MS = 20000;
+// Abort a job after this many back-to-back history-poll failures instead of
+// polling a dead socket blindly until the (up to 900s+) deadline (H9).
+const MAX_CONSECUTIVE_POLL_FAILURES = 5;
 
 // Where the tab is and what it shows, for errors that would otherwise say only "no textarea".
 const JS_PAGE_SNAPSHOT = `
@@ -249,6 +283,16 @@ function isUnfinishedMp4(buf) {
     offset += size;
   }
   return !hasMoov || offset !== buf.length;
+}
+
+// Muse saves each job's output as `final_<taskTag>_<n>s.mp4`. A file carrying a
+// DIFFERENT job's tag belongs to another job, so it must never be adopted here.
+// Centralises the check that was duplicated across the poll loop (M5).
+function isForeignFinalVideo(pathOrUrl, taskTag) {
+  const m = String(pathOrUrl || "")
+    .toLowerCase()
+    .match(/final_([a-z0-9]{4,12})_\d+s\.mp4/i);
+  return Boolean(m && m[1].toLowerCase() !== String(taskTag || "").toLowerCase());
 }
 
 // Re-downloads the same VM file until ffmpeg has finished writing it, so "Hoàn tất" never points at a stub.
@@ -318,6 +362,7 @@ class MuseEngine {
     this._chromeLaunchPromise = null;
     this._chromeLaunchPromises = new Map();
     this.portModes = new Map();
+    this.portProxies = new Map();
     this.knownCdpPorts = new Set([this.cdpPort]);
     this.pendingLoginPorts = new Set();
     this._openTabChain = Promise.resolve();
@@ -435,7 +480,7 @@ class MuseEngine {
    * Launches Chrome in Headless (--headless=new) mode by default, or visibly when requested!
    * Serialized per port so concurrent streams/logins never spawn duplicate processes on the same port.
    */
-  async ensureChrome(forceVisible = false, customPort = null, slotHint = null) {
+  async ensureChrome(forceVisible = false, customPort = null, slotHint = null, proxyOverride = null) {
     if (this._autoCloseChromeTimer) {
       clearTimeout(this._autoCloseChromeTimer);
       this._autoCloseChromeTimer = null;
@@ -446,7 +491,7 @@ class MuseEngine {
     if (existingPromise) {
       return existingPromise;
     }
-    const p = this._ensureChromeInternal(forceVisible, targetPort, slotHint).finally(() => {
+    const p = this._ensureChromeInternal(forceVisible, targetPort, slotHint, proxyOverride).finally(() => {
       this._chromeLaunchPromises.delete(targetPort);
       if (targetPort === this.cdpPort) {
         this._chromeLaunchPromise = null;
@@ -459,17 +504,36 @@ class MuseEngine {
     return p;
   }
 
-  async _ensureChromeInternal(forceVisible = false, targetPort = this.cdpPort, slotHint = null) {
+  async _ensureChromeInternal(
+    forceVisible = false,
+    targetPort = this.cdpPort,
+    slotHint = null,
+    proxyOverride = null
+  ) {
     const port = Number(targetPort || this.cdpPort);
     const profileDir = this._getProfileDirForPort(port);
     const isVisibleMode =
       Boolean(forceVisible) ||
       Boolean(this.store.settings && this.store.settings.showChromeWindow === true);
 
+    const accForPort = (this.store.accounts || []).find(
+      (a) => Number(a.cdp_port || this.cdpPort) === port
+    );
+    const rawProxy = String(
+      proxyOverride !== null && proxyOverride !== undefined
+        ? proxyOverride
+        : accForPort?.proxy || ""
+    ).trim();
+
     if (await this.isChromeAlive(port)) {
       const currentMode = this.portModes.get(port);
-      if (isVisibleMode && currentMode === "headless") {
-        this.log(`Chuyển cổng CDP :${port} từ Chế độ Ngầm (Headless) sang Chế độ Hiển thị...`);
+      const currentProxy = this.portProxies.get(port) || "";
+      if ((isVisibleMode && currentMode === "headless") || currentProxy !== rawProxy) {
+        this.log(
+          `Khởi động lại cổng CDP :${port} để áp dụng ${
+            currentProxy !== rawProxy ? "cấu hình Proxy mới" : "Chế độ Hiển thị"
+          }...`
+        );
         await this._closeBrowserOnPort(port);
       } else {
         return true;
@@ -519,6 +583,17 @@ class MuseEngine {
       `--window-position=${initBounds.left},${initBounds.top}`,
     ];
 
+    if (rawProxy) {
+      const bridgeUrl = await getOrCreateLocalProxyBridge(rawProxy).catch(() => null);
+      if (bridgeUrl) {
+        args.push(`--proxy-server=${bridgeUrl}`);
+        const parsedP = parseProxyConfig(rawProxy);
+        this.log(
+          `[Proxy Cổng :${port}] Đã gắn Proxy riêng (${parsedP ? parsedP.label : rawProxy}) qua cầu nối cục bộ ${bridgeUrl}`
+        );
+      }
+    }
+
     if (!isVisibleMode) {
       args.push("--headless=new", "--hide-scrollbars", "--mute-audio");
     }
@@ -542,6 +617,7 @@ class MuseEngine {
       await new Promise((r) => setTimeout(r, 500));
       if (await this.isChromeAlive(port)) {
         this.portModes.set(port, isVisibleMode ? "visible" : "headless");
+        this.portProxies.set(port, rawProxy);
         this.log(
           `Đã kết nối Engine CDP cổng :${port} (${isVisibleMode ? "Visible" : "Headless 100%"}) thành công!`
         );
@@ -1011,11 +1087,16 @@ foreach ($p in $procs) {
   async loginWithBrowser({
     accountName = "",
     accountId = "",
+    proxy = "",
     forceNewProfile = false,
     slotOffset = 0,
     timeoutSec = 240,
   } = {}) {
     const existingAcc = accountId ? this.store.getAccount(accountId) : null;
+    const effectiveProxy = String(proxy || existingAcc?.proxy || "").trim();
+    if (existingAcc && proxy !== undefined && String(proxy).trim()) {
+      this.store.updateAccountProxy(existingAcc.id, String(proxy).trim());
+    }
 
     // First, sync port 9225 if it already has an active session so Account #1 is never lost
     if (!existingAcc && !this.pendingLoginPorts.has(this.cdpPort)) {
@@ -1050,7 +1131,7 @@ foreach ($p in $procs) {
 
     let cdp = null;
     try {
-      await this.ensureChrome(true, targetPort, gridSlot);
+      await this.ensureChrome(true, targetPort, gridSlot, effectiveProxy);
       await this.bringChromeToFront({ saveSetting: true, targetPort });
 
       const targets = await getTargets(this.cdpHost, targetPort);
@@ -1276,6 +1357,7 @@ foreach ($p in $procs) {
       const { account, isNew } = this.store.addAccount(finalName, normalized, detectedEmail, {
         accountId: existingAcc ? existingAcc.id : "",
         cdpPort: targetPort,
+        proxy: effectiveProxy,
         forceNew: isAddingNewAccount,
       });
       this.store.markLive(account.id, { vm_state: vmState });
@@ -1431,6 +1513,9 @@ foreach ($p in $procs) {
     });
 
     const cdp = new CDPClient(pageTarget.webSocketDebuggerUrl);
+    // The tab/slot are already reserved above. If anything below throws, the caller
+    // never gets a session to close, so release everything here and rethrow (H7).
+    try {
     await cdp.connect();
     await cdp.send("Network.enable");
     await cdp.send("Page.enable");
@@ -1581,6 +1666,12 @@ foreach ($p in $procs) {
     }
 
     return { cdp, targetId: pageTarget.id, cdpPort: accPort, createdNewTab, streamSlot };
+    } catch (err) {
+      await this._closeSessionPage({ cdp, targetId: pageTarget.id, cdpPort: accPort }).catch(
+        () => {}
+      );
+      throw err;
+    }
   }
 
   async _closeSessionPage(session) {
@@ -2198,6 +2289,11 @@ foreach ($p in $procs) {
       await pipeline(Readable.fromWeb(res.body), fs.createWriteStream(fullPath));
       const size = fs.statSync(fullPath).size;
       if (!size) throw new Error("file rỗng");
+      // Catch a cut-off download: if the server told us the length, it must match.
+      const expectedLen = Number(res.headers.get("content-length") || 0);
+      if (expectedLen > 0 && size < expectedLen) {
+        throw new Error(`file cụt: ${size}/${expectedLen} bytes`);
+      }
       return { filename, mime, size };
     } catch (err) {
       if (fullPath) fs.rmSync(fullPath, { force: true });
@@ -2266,7 +2362,17 @@ foreach ($p in $procs) {
             .catch(() => {});
 
           const fullB64 = chunks.join("");
+          // A chunk comes back "" when the page navigated and the store key vanished mid-read.
+          // Verify we got every expected base64 char, then that the bytes form a complete file,
+          // so a truncated read retries this attempt instead of being saved as success (H8).
+          if (fullB64.length !== meta.b64Len) {
+            throw new Error(`dữ liệu cụt: ${fullB64.length}/${meta.b64Len} ký tự base64`);
+          }
           const buf = Buffer.from(fullB64, "base64");
+          if (!buf.length) throw new Error("file rỗng");
+          if (expect === "video" && isUnfinishedMp4(buf)) {
+            throw new Error("video MP4 chưa hoàn tất (thiếu moov hoặc bị cụt)");
+          }
           const filename = reserveUniqueFile(this.store.mediaDir, base, mediaExtFor(meta.mime, expect));
           fs.writeFileSync(path.join(this.store.mediaDir, filename), buf);
           return result(filename, meta.mime, buf.length, fullB64);
@@ -2398,8 +2504,30 @@ foreach ($p in $procs) {
         `(Nếu ảnh chỉ chụp sản phẩm mà hoàn toàn không có chữ tiêu đề sản phẩm nào thì in [[PRODUCT_TITLE: NONE]]).`
       : "";
 
+    // Optional user-defined prompt format from Settings. When set it replaces the built-in
+    // wrapper; the mandatory execution policy + product-title rules are still appended so
+    // generation keeps working regardless of how the user worded the template.
+    const customPromptTpl =
+      expect === "video"
+        ? String((this.store.settings && this.store.settings.promptTemplateVideo) || "").trim()
+        : String((this.store.settings && this.store.settings.promptTemplateImage) || "").trim();
+    const promptTplVars = {
+      prompt: cleanPrompt,
+      duration: targetDurationSec,
+      ratio: aspectRatio,
+      quality: qUpper,
+      output: targetVmVideoName,
+      clips: clipCount10s,
+      specs: specs.join(", "),
+    };
+
     let finalPrompt = cleanPrompt;
-    if (expect === "video") {
+    if (customPromptTpl) {
+      finalPrompt =
+        applyPromptTemplate(customPromptTpl, promptTplVars) +
+        videoExecutionPolicy +
+        productTitleInstruction;
+    } else if (expect === "video") {
       if (isLongVideo) {
         finalPrompt =
           `Please create and present a complete ${targetDurationSec}-second MP4 video (${specs.join(", ")}) for this scene: ${cleanPrompt}\n\n` +
@@ -2424,8 +2552,10 @@ foreach ($p in $procs) {
       }
     };
 
-    this.activeCount += 1;
+    // Construct the gateway BEFORE bumping activeCount: if the constructor throws,
+    // we're still outside the try/finally, so a premature increment would leak forever.
     const gw = new MuseGateway(account, { store: this.store });
+    this.activeCount += 1;
     const runner = {
       taskId: task.id,
       rowId: rowId || "",
@@ -2456,9 +2586,13 @@ foreach ($p in $procs) {
 
     try {
       checkCancelled();
-      reportProgress(10, "Đang xác thực HTTP & kết nối cổng Noise-XX Gateway (Không dùng CDP)...");
+      const proxyNote = gw.proxy ? ` · Proxy ${gw.proxy.label}` : "";
+      reportProgress(
+        10,
+        `Đang xác thực HTTP & kết nối cổng Noise-XX Gateway${proxyNote} (Không dùng CDP)...`
+      );
       this.log(
-        `[${account.name}] [HTTP + Noise-XX Gateway] Bắt đầu tạo ${expect.toUpperCase()} (${aspectRatio}, ${
+        `[${account.name}] [HTTP + Noise-XX Gateway${proxyNote}] Bắt đầu tạo ${expect.toUpperCase()} (${aspectRatio}, ${
           expect === "video" ? `${targetDurationSec}s${isLongVideo ? " [Ghép đa cảnh]" : ""}, ` : ""
         }${qUpper}): "${cleanPrompt.slice(0, 60)}..."`
       );
@@ -2506,7 +2640,9 @@ foreach ($p in $procs) {
       const taskSendStartMs = Date.now();
       let minTaskOccurredAtMs = taskSendStartMs - 1000;
 
-      const initHist = await gw.getHistory({ sessionId, limit: 30 }).catch(() => []);
+      // Baseline must succeed: if it silently returned [], every pre-existing VM file
+      // would look "new" and the job could pick up stale media. Let a failure abort (H9).
+      const initHist = await gw.getHistory({ sessionId, limit: 30 });
       for (const ev of initHist) {
         if (ev?.message_id) baselineMsgIds.add(ev.message_id);
         const info = inspectHistoryEvent(ev);
@@ -2517,7 +2653,7 @@ foreach ($p in $procs) {
           baselineMediaKeys.add(`${r.url || ""}|${r.path || ""}|${r.id || ""}`);
         }
       }
-      const initFiles = await gw.listGeneratedFiles().catch(() => []);
+      const initFiles = await gw.listGeneratedFiles();
       for (const f of initFiles) {
         baselineMediaKeys.add(`${f.url || ""}|${f.path || ""}|${f.id || ""}|${f.mtimeMs || 0}`);
         baselineMediaKeys.add(`${f.url || ""}|${f.path || ""}|${f.id || ""}`);
@@ -2570,6 +2706,7 @@ foreach ($p in $procs) {
       const handledAssistantTurnIds = new Set();
       const preStitchMediaKeys = new Set();
       let lastSeenAssistantText = "";
+      let consecutivePollFailures = 0;
 
       while (Date.now() < deadline) {
         checkCancelled();
@@ -2578,7 +2715,17 @@ foreach ($p in $procs) {
         const elapsedSec = Math.round((Date.now() - tStart) / 1000);
         const progPct = Math.min(92, Math.round(36 + elapsedSec * 0.45));
 
-        const events = await gw.getHistory({ sessionId, limit: 40 }).catch(() => []);
+        let events;
+        try {
+          events = await gw.getHistory({ sessionId, limit: 40 });
+          consecutivePollFailures = 0;
+        } catch (pollErr) {
+          consecutivePollFailures += 1;
+          if (consecutivePollFailures >= MAX_CONSECUTIVE_POLL_FAILURES) {
+            throw new Error(`Mất kết nối Gateway khi theo dõi tiến trình: ${pollErr.message}`);
+          }
+          continue;
+        }
         checkCancelled();
         const newMediaCandidates = [];
         const assistantReplies = [];
@@ -2636,12 +2783,7 @@ foreach ($p in $procs) {
           for (const ref of info.mediaRefs) {
             const key = `${ref.url || ""}|${ref.path || ""}|${ref.id || ""}`;
             if (baselineMediaKeys.has(key)) continue;
-            const refPathLower = String(ref.path || ref.url || "").toLowerCase();
-            // Reject final_...mp4 belonging to a different taskTag!
-            const otherFinalMatch = refPathLower.match(/final_([a-z0-9]{4,12})_\d+s\.mp4/i);
-            if (otherFinalMatch && otherFinalMatch[1].toLowerCase() !== taskTag.toLowerCase()) {
-              continue;
-            }
+            if (isForeignFinalVideo(ref.path || ref.url, taskTag)) continue;
             if (isMatchingMediaKey(ref.url || ref.path)) {
               if (!newMediaCandidates.some((c) => c.key === key)) {
                 newMediaCandidates.push({ ...ref, key, fromPresentation: true });
@@ -2656,19 +2798,23 @@ foreach ($p in $procs) {
           for (const f of vmFiles) {
             const key = `${f.url || ""}|${f.path || ""}|${f.id || ""}`;
             const mtimeKey = `${f.url || ""}|${f.path || ""}|${f.id || ""}|${f.mtimeMs || 0}`;
-            const isFreshlyModified = f.mtimeMs && f.mtimeMs >= taskSendStartMs - 2000;
+            const fname = String(f.name || f.path || "").toLowerCase();
+            // A recently-modified file only re-enters past the baseline if it's OUR file
+            // (carries this job's tag). Otherwise a sibling/previous job's freshly-touched
+            // file would be mistaken for this job's output (root cause of "lấy nhầm video").
+            const isFreshlyModified =
+              f.mtimeMs && f.mtimeMs >= taskSendStartMs - 2000 && fname.includes(taskTag);
             if (baselineMediaKeys.has(mtimeKey) && !isFreshlyModified) continue;
             if (baselineMediaKeys.has(key) && !isFreshlyModified) continue;
-            const fname = String(f.name || f.path || "").toLowerCase();
             if (expect === "video") {
-              const otherFinalMatch = fname.match(/final_([a-z0-9]{4,12})_\d+s\.mp4/i);
-              if (otherFinalMatch && otherFinalMatch[1].toLowerCase() !== taskTag.toLowerCase()) {
-                continue;
-              }
+              if (isForeignFinalVideo(fname, taskTag)) continue;
               if (/(?:^|\/)(?:clip|seg|part|temp|tmp)\d*[_-]/i.test(fname) && stitchCmdCount < 3) {
                 continue;
               }
-              if (this.activeCount > 1 && !fname.includes(taskTag)) {
+              // vmFiles is only a fallback when the session presented nothing. Require this
+              // job's tag so we never adopt a sibling job's untagged workspace file (M5);
+              // the session-presented path above still matches a legit untagged video.
+              if (!fname.includes(taskTag)) {
                 continue;
               }
             }
@@ -2730,8 +2876,7 @@ foreach ($p in $procs) {
         const stitchedCandidate = newMediaCandidates.find((c) => {
           const p = String(c.path || c.url || "").toLowerCase();
           if (/(?:^|\/)(?:clip|seg|part|temp|tmp)\d*[_-]/i.test(p)) return false;
-          const otherFinal = p.match(/final_([a-z0-9]{4,12})_\d+s\.mp4/i);
-          if (otherFinal && otherFinal[1].toLowerCase() !== taskTag.toLowerCase()) return false;
+          if (isForeignFinalVideo(p, taskTag)) return false;
           if (p.includes(targetVmVideoName.toLowerCase()) || p.includes(`final_${taskTag.toLowerCase()}`)) {
             return true;
           }
@@ -2885,8 +3030,32 @@ foreach ($p in $procs) {
       if (chosenBase) {
         this.log(`[${account.name}] 🏷️ Đặt tên file ${expect.toUpperCase()} theo tên bạn đặt: "${chosenBase}"`);
       }
+      // Optional output-name template from Settings (applied only when the row has no
+      // explicit name). {title} {prompt} {duration} {ratio} {quality} {mode} {tag}
+      // {date} {time} {datetime} {rand}; reserveUniqueFile still de-dupes with "(2)".
+      let templatedBase = "";
+      const nameTpl = String((this.store.settings && this.store.settings.outputNameTemplate) || "").trim();
+      if (!chosenBase && nameTpl) {
+        templatedBase = outputFileBase(
+          buildTemplatedName(nameTpl, {
+            title: preferredMediaTitle || extractedProductTitle || "",
+            prompt: cleanPrompt,
+            duration: `${targetDurationSec}s`,
+            ratio: aspectRatio,
+            quality: qUpper,
+            mode: expect,
+            tag: taskTag,
+          })
+        );
+        if (templatedBase) {
+          this.log(`[${account.name}] 🏷️ Đặt tên file ${expect.toUpperCase()} theo mẫu: "${templatedBase}"`);
+        }
+      }
       const base =
-        chosenBase || preferredMediaTitle || `${prefix}_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
+        chosenBase ||
+        templatedBase ||
+        preferredMediaTitle ||
+        `${prefix}_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
       const ext = mediaExtFor(mime || matchedMedia.path || matchedMedia.url, expect);
       const filename = reserveUniqueFile(this.store.mediaDir, base, ext);
       const fullPath = path.join(this.store.mediaDir, filename);
@@ -3098,6 +3267,9 @@ module.exports = {
   MODEL_ALIASES,
   minStitchedDurationSec,
   isUnfinishedMp4,
+  isForeignFinalVideo,
+  applyPromptTemplate,
+  buildTemplatedName,
   downloadFinishedMedia,
   outputFileBase,
 };

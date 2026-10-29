@@ -177,17 +177,23 @@ function getMissingEssentialCookies(cookies) {
 }
 
 class Store {
-  constructor(dataDir) {
+  constructor(dataDir, options = {}) {
     this.dataDir = dataDir;
+    // When the host provides an OS-keychain-backed secure store (Electron safeStorage),
+    // account cookies (full session access) are encrypted at rest in accounts.enc.
+    // Without it (raw CLI/tests) we keep the legacy plaintext accounts.json behaviour.
+    const ss = options.secureStore;
+    this.secureStore = ss && ss.available ? ss : null;
     this.mediaDir = path.join(dataDir, "media");
     this.accountsFile = path.join(dataDir, "accounts.json");
+    this.accountsEncFile = path.join(dataDir, "accounts.enc");
     this.tasksFile = path.join(dataDir, "tasks.json");
     this.settingsFile = path.join(dataDir, "settings.json");
     this.batchRowsFile = path.join(dataDir, "batch-rows.json");
 
     fs.mkdirSync(this.mediaDir, { recursive: true });
 
-    this.accounts = this._loadJson(this.accountsFile, []);
+    this.accounts = this._loadAccounts();
     this.tasks = this._loadJson(this.tasksFile, []);
     this.settings = this._loadJson(this.settingsFile, {
       apiKey: "",
@@ -200,6 +206,10 @@ class Store {
       defaultDuration: "20s",
       defaultQuality: "4K",
       defaultMode: "video",
+      exportDir: "",
+      promptTemplateVideo: "",
+      promptTemplateImage: "",
+      outputNameTemplate: "",
       autoKeepalive: true,
       showChromeWindow: false,
       headlessMode: true,
@@ -357,7 +367,60 @@ class Store {
     }
   }
 
+  _backupCorruptFile(filePath) {
+    try {
+      if (fs.existsSync(filePath)) {
+        fs.renameSync(filePath, `${filePath}.corrupt-${Date.now()}`);
+      }
+    } catch (_err) {
+      // ignore
+    }
+  }
+
+  _writeAccountsEncrypted(accounts) {
+    const enc = this.secureStore.encrypt(JSON.stringify(accounts, null, 2));
+    const tmp = `${this.accountsEncFile}.tmp`;
+    fs.writeFileSync(tmp, enc);
+    fs.renameSync(tmp, this.accountsEncFile);
+  }
+
+  _loadAccounts() {
+    if (!this.secureStore) {
+      return this._loadJson(this.accountsFile, []);
+    }
+    if (fs.existsSync(this.accountsEncFile)) {
+      try {
+        return JSON.parse(this.secureStore.decrypt(fs.readFileSync(this.accountsEncFile)));
+      } catch (_err) {
+        // Keep the unreadable file for recovery instead of silently wiping accounts.
+        this._backupCorruptFile(this.accountsEncFile);
+        return [];
+      }
+    }
+    // One-time migration of a legacy plaintext accounts.json to encrypted-at-rest.
+    const legacy = this._loadJson(this.accountsFile, null);
+    if (Array.isArray(legacy)) {
+      try {
+        this._writeAccountsEncrypted(legacy);
+        fs.rmSync(this.accountsFile, { force: true });
+      } catch (_err) {
+        // ignore; the plaintext file stays as the source of truth until encryption succeeds
+      }
+      return legacy;
+    }
+    return [];
+  }
+
   saveAccounts() {
+    if (this.secureStore) {
+      try {
+        this._writeAccountsEncrypted(this.accounts);
+        return;
+      } catch (_err) {
+        // ponytail: never lose accounts on an encrypt failure; fall back to plaintext.
+        // Upgrade path: surface this to the UI so the user knows cookies aren't encrypted.
+      }
+    }
     this._saveJson(this.accountsFile, this.accounts);
   }
 
@@ -413,6 +476,8 @@ class Store {
         name: a.name,
         email: a.email || "",
         cdp_port: Number(a.cdp_port || 9225 + idx),
+        proxy: a.proxy || "",
+        proxy_ip: a.proxy_ip || "",
         status: effectiveStatus,
         verified_live: Boolean(a.verified_live && effectiveStatus === "live"),
         vm_state: a.vm_state || "",
@@ -481,6 +546,9 @@ class Store {
         targetExisting.name = name;
       }
       if (email) targetExisting.email = email;
+      if (options && options.proxy !== undefined && String(options.proxy).trim()) {
+        targetExisting.proxy = String(options.proxy).trim();
+      }
       if (
         requestedPort > 0 &&
         !this.accounts.some((a) => a.id !== targetExisting.id && Number(a.cdp_port) === requestedPort)
@@ -503,6 +571,8 @@ class Store {
       name: (!isAutoName && name) || email || this._nextAutoAccountName(),
       email: email || "",
       cdp_port: assignedPort,
+      proxy: options && options.proxy ? String(options.proxy).trim() : "",
+      proxy_ip: "",
       cookies,
       fingerprint: fp,
       cookie_expires: exp,
@@ -520,6 +590,40 @@ class Store {
     this.accounts.push(acc);
     this.saveAccounts();
     return { account: acc, isNew: true };
+  }
+
+  updateAccountProxy(accId, proxyStr = "", proxyIp = null) {
+    const acc = this.getAccount(accId);
+    if (!acc) return null;
+    const cleaned = String(proxyStr || "").trim();
+    if (acc.proxy !== cleaned) {
+      acc.proxy_ip = "";
+    }
+    acc.proxy = cleaned;
+    if (proxyIp !== null && proxyIp !== undefined) {
+      acc.proxy_ip = String(proxyIp || "");
+    }
+    this.saveAccounts();
+    return acc;
+  }
+
+  bulkAssignProxies(proxyLines = []) {
+    const lines = (Array.isArray(proxyLines) ? proxyLines : [])
+      .map((l) => String(l || "").trim())
+      .filter(Boolean);
+    if (!lines.length || !this.accounts.length) return 0;
+    let updated = 0;
+    for (let i = 0; i < this.accounts.length; i += 1) {
+      if (i >= lines.length) break;
+      const p = lines[i];
+      if (this.accounts[i].proxy !== p) {
+        this.accounts[i].proxy_ip = "";
+      }
+      this.accounts[i].proxy = p;
+      updated += 1;
+    }
+    this.saveAccounts();
+    return updated;
   }
 
   updateAccountCookies(accId, newCookies, email = "", vmState = "") {

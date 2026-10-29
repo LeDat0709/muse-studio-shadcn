@@ -1,6 +1,6 @@
 "use strict";
 
-const { app, BrowserWindow, ipcMain, shell, dialog } = require("electron");
+const { app, BrowserWindow, ipcMain, shell, dialog, safeStorage } = require("electron");
 const path = require("path");
 const fs = require("fs");
 const { MuseServer } = require("../src/server");
@@ -35,12 +35,29 @@ function resolveDataDir() {
   return userDir;
 }
 
+// OS-keychain-backed (Keychain / DPAPI / libsecret) encryption for cookies at rest.
+function buildSecureStore() {
+  try {
+    if (safeStorage && safeStorage.isEncryptionAvailable()) {
+      return {
+        available: true,
+        encrypt: (text) => safeStorage.encryptString(text),
+        decrypt: (buf) => safeStorage.decryptString(buf),
+      };
+    }
+  } catch (_err) {
+    // fall through to plaintext
+  }
+  return { available: false };
+}
+
 async function createMainWindow() {
   const dataDir = resolveDataDir();
   museServer = new MuseServer({
     rootDir: path.resolve(__dirname, ".."),
     dataDir,
     port: Number(process.env.MUSE_PORT || 18638),
+    secureStore: buildSecureStore(),
   });
   const baseUrl = await museServer.start();
 
@@ -110,10 +127,11 @@ ipcMain.handle("embong:open-external", async (_evt, url) => {
   return { ok: false };
 });
 
-ipcMain.handle("embong:choose-download-folder", async () => {
+ipcMain.handle("embong:choose-download-folder", async (_evt, defaultPath = "") => {
   const res = await dialog.showOpenDialog(mainWindow, {
     title: "Chọn thư mục xuất Video / Ảnh hàng loạt",
     properties: ["openDirectory", "createDirectory"],
+    ...(defaultPath && fs.existsSync(defaultPath) ? { defaultPath } : {}),
   });
   if (res.canceled || !res.filePaths.length) return { canceled: true };
   return { canceled: false, folderPath: res.filePaths[0] };
@@ -121,6 +139,8 @@ ipcMain.handle("embong:choose-download-folder", async () => {
 
 ipcMain.handle("embong:export-media-files", async (_evt, { filenames = [], targetDir = "" }) => {
   if (!museServer || !targetDir) return { ok: false, error: "Thiếu thư mục đích" };
+  // A remembered folder may have been moved/deleted; report it so the UI can re-prompt.
+  if (!fs.existsSync(targetDir)) return { ok: false, error: "Thư mục đích không còn tồn tại" };
   let copied = 0;
   for (const name of filenames) {
     const safe = path.basename(name);

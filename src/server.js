@@ -6,6 +6,7 @@ const path = require("path");
 const crypto = require("crypto");
 const { Store } = require("./store");
 const { MuseEngine, resolveModel, findChromeBinary } = require("./engine");
+const { testProxyConnection, parseProxyConfig } = require("./gateway");
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
 const SUPPORTED_ASPECT_RATIOS = ["1:1", "16:9", "9:16", "4:3", "3:4"];
@@ -172,7 +173,7 @@ class MuseServer {
     this.rootDir = options.rootDir || path.resolve(__dirname, "..");
     this.dataDir = options.dataDir || path.join(this.rootDir, "data");
     this.desktopDir = path.join(this.rootDir, "desktop");
-    this.store = options.store || new Store(this.dataDir);
+    this.store = options.store || new Store(this.dataDir, options);
     this.engine = options.engine || new MuseEngine(this.store, options);
     this.host = options.host || "127.0.0.1";
     this.port =
@@ -509,12 +510,27 @@ class MuseServer {
     if (pathname === "/admin/accounts" && req.method === "POST") {
       const body = await this._readJson(req);
       try {
+        const rawProxy = String(body.proxy || "").trim();
+        if (rawProxy && !parseProxyConfig(rawProxy)) {
+          throw new Error(
+            "Định dạng Proxy không hợp lệ. Vui lòng nhập theo dạng host:port:user:pass, http://user:pass@host:port hoặc socks5://user:pass@host:port"
+          );
+        }
         const { account, isNew } = this.store.addAccount(
           body.name || body.label || "",
           body.cookies || body.cookie || "",
           body.email || "",
-          { expires: body.expires || null }
+          { expires: body.expires || null, proxy: rawProxy }
         );
+        if (rawProxy) {
+          testProxyConnection(rawProxy)
+            .then((pr) => {
+              if (pr && pr.ip) {
+                this.store.updateAccountProxy(account.id, rawProxy, pr.ip);
+              }
+            })
+            .catch(() => {});
+        }
         let checkResult = null;
         if (body.autoCheck && typeof this.engine.renewAccount === "function") {
           checkResult = await this.engine.renewAccount(account);
@@ -523,6 +539,7 @@ class MuseServer {
           this.store.listAccounts().find((a) => a.id === account.id) || {
             id: account.id,
             name: account.name,
+            proxy: account.proxy || "",
             cookie_count: account.cookies.length,
             cookie_expires: account.cookie_expires || 0,
             status: account.status,
@@ -549,14 +566,57 @@ class MuseServer {
     if (pathname === "/admin/accounts/browser-login" && req.method === "POST") {
       const body = await this._readJson(req);
       try {
+        const rawProxy = String(body.proxy || "").trim();
+        if (rawProxy && !parseProxyConfig(rawProxy)) {
+          throw new Error("Định dạng Proxy không hợp lệ (Hỗ trợ host:port:user:pass hoặc http:// / socks5://)");
+        }
         const result = await this.engine.loginWithBrowser({
           accountName: body.name || "",
           accountId: body.accountId || "",
+          proxy: rawProxy,
           forceNewProfile: Boolean(body.forceNewProfile),
           slotOffset: Number(body.slotOffset || 0),
           timeoutSec: Number(body.timeoutSec || 240),
         });
         return this._sendJson(res, 200, result);
+      } catch (err) {
+        return this._sendJson(res, 400, { ok: false, error: err.message });
+      }
+    }
+
+    if (pathname === "/admin/accounts/bulk-proxy" && req.method === "POST") {
+      const body = await this._readJson(req);
+      try {
+        const rawList = Array.isArray(body.proxies)
+          ? body.proxies
+          : String(body.proxies || "")
+              .split(/\r?\n/)
+              .map((s) => s.trim())
+              .filter(Boolean);
+        if (!rawList.length) {
+          throw new Error("Vui lòng nhập ít nhất 1 dòng Proxy");
+        }
+        for (const line of rawList) {
+          if (!parseProxyConfig(line)) {
+            throw new Error(`Dòng Proxy không hợp lệ: "${line}"`);
+          }
+        }
+        const updated = this.store.bulkAssignProxies(rawList);
+        return this._sendJson(res, 200, {
+          ok: true,
+          updated,
+          accounts: this.store.listAccounts(),
+        });
+      } catch (err) {
+        return this._sendJson(res, 400, { ok: false, error: err.message });
+      }
+    }
+
+    if (pathname === "/admin/proxy/test" && req.method === "POST") {
+      const body = await this._readJson(req);
+      try {
+        const out = await testProxyConnection(body.proxy || "");
+        return this._sendJson(res, 200, out);
       } catch (err) {
         return this._sendJson(res, 400, { ok: false, error: err.message });
       }
@@ -571,7 +631,7 @@ class MuseServer {
     }
 
     const accActionMatch = pathname.match(
-      /^\/admin\/accounts\/([^/]+)\/(toggle|test|renew|quota|open-chrome)$/
+      /^\/admin\/accounts\/([^/]+)\/(toggle|test|renew|quota|open-chrome|proxy)$/
     );
     if (accActionMatch) {
       const accId = accActionMatch[1];
@@ -579,6 +639,37 @@ class MuseServer {
       const acc = this.store.getAccount(accId);
       if (!acc) {
         return this._sendJson(res, 404, { ok: false, error: "Không tìm thấy ních" });
+      }
+
+      if (action === "proxy" && req.method === "POST") {
+        const body = await this._readJson(req);
+        try {
+          const rawProxy = String(body.proxy !== undefined ? body.proxy : acc.proxy || "").trim();
+          if (rawProxy && !parseProxyConfig(rawProxy)) {
+            throw new Error(
+              "Định dạng Proxy không hợp lệ. Hỗ trợ: host:port:user:pass, http://user:pass@host:port, hoặc socks5://user:pass@host:port"
+            );
+          }
+          this.store.updateAccountProxy(accId, rawProxy, rawProxy ? undefined : "");
+          if (body.test && rawProxy) {
+            const testOut = await testProxyConnection(rawProxy);
+            this.store.updateAccountProxy(accId, rawProxy, testOut.ip);
+            return this._sendJson(res, 200, {
+              ok: true,
+              proxy: rawProxy,
+              proxy_ip: testOut.ip,
+              latencyMs: testOut.latencyMs,
+              label: testOut.label,
+            });
+          }
+          return this._sendJson(res, 200, {
+            ok: true,
+            proxy: rawProxy,
+            proxy_ip: acc.proxy_ip || "",
+          });
+        } catch (err) {
+          return this._sendJson(res, 400, { ok: false, error: err.message });
+        }
       }
 
       if (action === "toggle" && req.method === "POST") {

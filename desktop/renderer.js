@@ -747,6 +747,14 @@
       }
 
       if (data.settings) {
+        state.settings = data.settings;
+        if ($("#setExportDir")) $("#setExportDir").value = data.settings.exportDir || "";
+        if ($("#setOutputNameTemplate") && document.activeElement !== $("#setOutputNameTemplate"))
+          $("#setOutputNameTemplate").value = data.settings.outputNameTemplate || "";
+        if ($("#setPromptTemplateVideo") && document.activeElement !== $("#setPromptTemplateVideo"))
+          $("#setPromptTemplateVideo").value = data.settings.promptTemplateVideo || "";
+        if ($("#setPromptTemplateImage") && document.activeElement !== $("#setPromptTemplateImage"))
+          $("#setPromptTemplateImage").value = data.settings.promptTemplateImage || "";
         if ($("#setMaxConcurrency") && document.activeElement !== $("#setMaxConcurrency"))
           $("#setMaxConcurrency").value = data.settings.maxConcurrency || 3;
         if ($("#setKeepaliveMin") && document.activeElement !== $("#setKeepaliveMin"))
@@ -887,7 +895,7 @@ curl ${baseUrlV1}/videos \\
     if (!state.accounts.length) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="9" style="text-align:center; padding: 36px; color: var(--muted-foreground)">
+          <td colspan="10" style="text-align:center; padding: 36px; color: var(--muted-foreground)">
             Chưa có tài khoản Muse.ai nào. Hãy bấm nút
             <strong style="color: var(--foreground)">Mở Chrome đăng nhập (Tự lấy Cookie)</strong>
             ở góc trên hoặc dán Cookie vào ô bên trên.
@@ -936,6 +944,16 @@ curl ${baseUrlV1}/videos \\
             <td>
               <strong>${escapeHtml(acc.name)}</strong>
               ${acc.email ? `<div style="font-size:11px;color:var(--muted-foreground)">${escapeHtml(acc.email)}</div>` : ""}
+            </td>
+            <td>
+              <div style="display:flex; gap:4px; align-items:center; min-width:215px">
+                <input type="text" class="input mono acc-proxy-input" data-id="${escapeHtml(acc.id)}" value="${escapeHtml(acc.proxy || "")}" placeholder="Mạng gốc (ip:port:user:pass)" style="height:26px; font-size:11px; padding:2px 6px" />
+                <button class="btn btn-soft btn-sm" data-acc-action="save-proxy" data-id="${escapeHtml(acc.id)}" style="height:26px; padding:0 7px" title="Lưu Proxy riêng cho ních này">Lưu</button>
+                <button class="btn btn-sm" data-acc-action="test-proxy" data-id="${escapeHtml(acc.id)}" style="height:26px; padding:0 7px" title="Kiểm tra kết nối &amp; lấy IP thực của Proxy">Test IP</button>
+              </div>
+              <div style="font-size:10.5px; margin-top:3px; color:${acc.proxy ? "var(--accent-strong)" : "var(--muted-foreground)"}">
+                ${acc.proxy ? (acc.proxy_ip ? `🟢 Proxy IP: <strong>${escapeHtml(acc.proxy_ip)}</strong>` : `🌐 Đang dùng Proxy riêng`) : `⚡ Mạng gốc (Direct)`}
+              </div>
             </td>
             <td>
               ${statusBadge}
@@ -1809,6 +1827,17 @@ curl ${baseUrlV1}/videos \\
     }
   }
 
+  async function saveExportDir(dir) {
+    try {
+      await api("/admin/settings", { method: "POST", body: { exportDir: dir } });
+      if (!state.settings) state.settings = {};
+      state.settings.exportDir = dir;
+      if ($("#setExportDir")) $("#setExportDir").value = dir;
+    } catch (_e) {
+      // non-fatal: the export itself still proceeds
+    }
+  }
+
   async function downloadSelectedBatch() {
     const readyRows = state.batchRows.filter((r) => r.selected && r.mediaUrl && r.filename);
     if (!readyRows.length) {
@@ -1817,16 +1846,35 @@ curl ${baseUrlV1}/videos \\
     }
 
     if (window.embongDesktop && window.embongDesktop.chooseDownloadFolder) {
-      const folderRes = await window.embongDesktop.chooseDownloadFolder();
-      if (folderRes.canceled || !folderRes.folderPath) return;
       const filenames = readyRows.map((r) => r.filename);
-      const out = await window.embongDesktop.exportMediaFiles({
-        filenames,
-        targetDir: folderRes.folderPath,
-      });
-      if (out.ok) {
-        showToast(`Đã xuất ${out.copied} file vào thư mục: ${folderRes.folderPath}`);
+      let targetDir = (state.settings && state.settings.exportDir) || "";
+
+      // No remembered folder yet: ask once, then remember it for next time.
+      if (!targetDir) {
+        const folderRes = await window.embongDesktop.chooseDownloadFolder();
+        if (folderRes.canceled || !folderRes.folderPath) return;
+        targetDir = folderRes.folderPath;
+        await saveExportDir(targetDir);
       }
+
+      let out = await window.embongDesktop.exportMediaFiles({ filenames, targetDir });
+      // Remembered folder was moved/deleted: re-ask once and retry.
+      if (!out.ok) {
+        const folderRes = await window.embongDesktop.chooseDownloadFolder(targetDir);
+        if (folderRes.canceled || !folderRes.folderPath) {
+          showToast(out.error || "Không xuất được file", true);
+          return;
+        }
+        targetDir = folderRes.folderPath;
+        await saveExportDir(targetDir);
+        out = await window.embongDesktop.exportMediaFiles({ filenames, targetDir });
+      }
+      showToast(
+        out.ok
+          ? `Đã xuất ${out.copied} file vào: ${targetDir} (đổi trong Cài đặt)`
+          : out.error || "Không xuất được file",
+        !out.ok
+      );
       return;
     }
 
@@ -2708,6 +2756,7 @@ curl ${baseUrlV1}/videos \\
     // Accounts Actions
     $("#btnAddAccountManual")?.addEventListener("click", async () => {
       const name = $("#accNameInput")?.value.trim() || "";
+      const proxy = $("#accProxyInput")?.value.trim() || $("#loginProxyInput")?.value.trim() || "";
       const cookies = $("#accCookieInput")?.value.trim() || "";
       if (!cookies) {
         showToast("Vui lòng dán dữ liệu Cookie Muse.ai!", true);
@@ -2721,10 +2770,11 @@ curl ${baseUrlV1}/videos \\
       try {
         const res = await api("/admin/accounts", {
           method: "POST",
-          body: { name, cookies, autoCheck: true },
+          body: { name, proxy, cookies, autoCheck: true },
         });
         $("#accNameInput").value = "";
         $("#accCookieInput").value = "";
+        if ($("#accProxyInput")) $("#accProxyInput").value = "";
         if (res.check && !res.check.ok) {
           showToast(
             `Ních [${res.account.name}] báo DIE (Không dùng được): ${res.check.error}`,
@@ -2747,6 +2797,35 @@ curl ${baseUrlV1}/videos \\
       }
     });
 
+    $("#btnBulkAssignProxy")?.addEventListener("click", async () => {
+      const proxies = $("#bulkProxyInput")?.value.trim() || "";
+      if (!proxies) {
+        showToast("Vui lòng dán danh sách Proxy (mỗi dòng 1 proxy) vào ô trước khi gắn!", true);
+        return;
+      }
+      const btn = $("#btnBulkAssignProxy");
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `${ICON.spinner}<span>Đang gắn Proxy...</span>`;
+      }
+      try {
+        const res = await api("/admin/accounts/bulk-proxy", {
+          method: "POST",
+          body: { proxies },
+        });
+        showToast(`Đã gắn Proxy thành công cho ${res.updated || 0} tài khoản!`);
+        await loadAccounts();
+        await loadStatus();
+      } catch (err) {
+        showToast(`Lỗi gắn Proxy hàng loạt: ${err.message}`, true);
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `Gắn Proxy hàng loạt cho các ních`;
+        }
+      }
+    });
+
     let pendingBrowserLogins = 0;
     const updateBrowserLoginButtonLabel = () => {
       const btn = $("#btnBrowserLoginCookie");
@@ -2760,12 +2839,21 @@ curl ${baseUrlV1}/videos \\
 
     $("#btnBrowserLoginCookie")?.addEventListener("click", async () => {
       const baseName = $("#accNameInput")?.value.trim() || "";
+      const rawLoginProxy =
+        $("#loginProxyInput")?.value.trim() ||
+        $("#accProxyInput")?.value.trim() ||
+        $("#bulkProxyInput")?.value.trim() ||
+        "";
+      const proxyList = rawLoginProxy
+        .split(/[\r\n,]+/)
+        .map((s) => s.trim())
+        .filter(Boolean);
       const count = Math.max(1, Math.min(8, Number($("#multiLoginCountSelect")?.value || 1)));
 
       showToast(
         count > 1
-          ? `Đang mở ${count} cửa sổ Chrome độc lập (Profile riêng) để bạn đăng nhập ${count} ních Muse.ai cùng lúc!`
-          : "Đang mở cửa sổ Chrome độc lập! Hãy đăng nhập tài khoản Muse.ai, tool sẽ tự bắt Cookie & thêm ních mới..."
+          ? `Đang mở ${count} cửa sổ Chrome độc lập (Profile riêng${proxyList.length ? " + Proxy riêng" : ""}) để bạn đăng nhập ${count} ních Muse.ai cùng lúc!`
+          : `Đang mở cửa sổ Chrome độc lập${proxyList.length ? ` qua Proxy (${proxyList[0]})` : ""}! Hãy đăng nhập tài khoản Muse.ai, tool sẽ tự bắt Cookie & thêm ních mới...`
       );
 
       for (let i = 0; i < count; i += 1) {
@@ -2773,6 +2861,7 @@ curl ${baseUrlV1}/videos \\
           await new Promise((r) => setTimeout(r, 700));
         }
         const winName = baseName && count > 1 ? `${baseName} #${i + 1}` : baseName;
+        const winProxy = proxyList.length ? proxyList[i % proxyList.length] : "";
         pendingBrowserLogins += 1;
         updateBrowserLoginButtonLabel();
 
@@ -2780,6 +2869,7 @@ curl ${baseUrlV1}/videos \\
           method: "POST",
           body: {
             name: winName,
+            proxy: winProxy,
             forceNewProfile: true,
             slotOffset: i,
             timeoutSec: 240,
@@ -2787,7 +2877,7 @@ curl ${baseUrlV1}/videos \\
         })
           .then(async (res) => {
             showToast(
-              `Đã lưu [${res.account.name}] LIVE (Profile :${res.cdp_port || res.account.cdp_port || 9225}) — ${res.cookie_count} cookies!`
+              `Đã lưu [${res.account.name}] LIVE (Profile :${res.cdp_port || res.account.cdp_port || 9225}${res.account.proxy ? " · Có Proxy" : ""}) — ${res.cookie_count} cookies!`
             );
             await loadAccounts();
             await loadStatus();
@@ -2863,6 +2953,27 @@ curl ${baseUrlV1}/videos \\
           } else {
             showToast(`Ních DIE (Không dùng được): ${r.error}`, true);
           }
+        } else if (action === "save-proxy" || action === "test-proxy") {
+          const proxyInput = document.querySelector(`.acc-proxy-input[data-id="${id}"]`);
+          const proxyVal = proxyInput ? proxyInput.value.trim() : "";
+          const isTest = action === "test-proxy";
+          btn.disabled = true;
+          btn.innerHTML = `${ICON.spinner}`;
+          const r = await api(`/admin/accounts/${id}/proxy`, {
+            method: "POST",
+            body: { proxy: proxyVal, test: isTest },
+          });
+          if (!proxyVal) {
+            showToast(`Đã xóa Proxy của ních [${id}] (Chuyển về Mạng gốc Direct).`);
+          } else if (isTest && r.test) {
+            if (r.test.ok) {
+              showToast(`Proxy LIVE! IP: ${r.test.ip} (${r.test.latency_ms}ms)`);
+            } else {
+              showToast(`Proxy lỗi kết nối: ${r.test.error}`, true);
+            }
+          } else {
+            showToast(`Đã lưu Proxy riêng cho ních [${id}]!`);
+          }
         } else if (action === "quota") {
           btn.disabled = true;
           btn.innerHTML = `${ICON.spinner}`;
@@ -2878,6 +2989,15 @@ curl ${baseUrlV1}/videos \\
       } catch (err) {
         showToast(err.message, true);
         await loadAccounts();
+      }
+    });
+
+    $("#accountsTableBody")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && e.target.classList.contains("acc-proxy-input")) {
+        e.preventDefault();
+        const id = e.target.dataset.id;
+        const saveBtn = document.querySelector(`[data-acc-action="save-proxy"][data-id="${id}"]`);
+        saveBtn?.click();
       }
     });
 
@@ -3241,6 +3361,9 @@ curl ${baseUrlV1}/videos \\
           videoTimeout: Number($("#setVideoTimeout")?.value || 600),
           geminiApiKey: geminiKey,
           geminiModel: $("#scriptGeminiModelSelect")?.value || "gemini-2.5-flash",
+          promptTemplateVideo: $("#setPromptTemplateVideo")?.value || "",
+          promptTemplateImage: $("#setPromptTemplateImage")?.value || "",
+          outputNameTemplate: $("#setOutputNameTemplate")?.value || "",
         },
       });
       if (geminiKey && $("#scriptGeminiKeyInput")) {
@@ -3248,6 +3371,22 @@ curl ${baseUrlV1}/videos \\
       }
       showToast("Đã lưu cấu hình hệ thống & Gemini API Key!");
       loadStatus();
+    });
+
+    $("#btnChooseExportDir")?.addEventListener("click", async () => {
+      if (!window.embongDesktop || !window.embongDesktop.chooseDownloadFolder) {
+        showToast("Chỉ chọn được thư mục trong ứng dụng Desktop.", true);
+        return;
+      }
+      const current = (state.settings && state.settings.exportDir) || "";
+      const folderRes = await window.embongDesktop.chooseDownloadFolder(current);
+      if (folderRes.canceled || !folderRes.folderPath) return;
+      await saveExportDir(folderRes.folderPath);
+      showToast(`Đã đặt thư mục xuất mặc định: ${folderRes.folderPath}`);
+    });
+    $("#btnClearExportDir")?.addEventListener("click", async () => {
+      await saveExportDir("");
+      showToast("Đã xóa thư mục xuất mặc định — sẽ hỏi lại mỗi lần xuất.");
     });
 
     // Modal close

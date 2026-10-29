@@ -1,6 +1,6 @@
 {
   "name": "muse-ai-studio-shadcn",
-  "version": "2.0.0",
+  "version": "2.1.0",
   "description": "Muse AI Studio — Node.js CDP Automation, Multi-Account Pool, Batch Video/Image Studio & OpenAI API Gateway (shadcn/ui)",
   "author": "LeDat0709",
   "main": "desktop/main.js",
@@ -13,7 +13,7 @@
     "spider": "graphify update . && node tools/graph-spider.js"
   },
   "devDependencies": {
-    "electron": "43.4.0",
+    "electron": "^43.4.0",
     "electron-builder": "26.17.0"
   },
   "build": {
@@ -33,7 +33,9 @@
       "target": [
         {
           "target": "portable",
-          "arch": ["x64"]
+          "arch": [
+            "x64"
+          ]
         }
       ]
     },
