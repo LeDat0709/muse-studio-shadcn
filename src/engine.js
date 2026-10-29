@@ -259,6 +259,16 @@ function isUnfinishedMp4(buf) {
   return !hasMoov || offset !== buf.length;
 }
 
+// Muse saves each job's output as `final_<taskTag>_<n>s.mp4`. A file carrying a
+// DIFFERENT job's tag belongs to another job, so it must never be adopted here.
+// Centralises the check that was duplicated across the poll loop (M5).
+function isForeignFinalVideo(pathOrUrl, taskTag) {
+  const m = String(pathOrUrl || "")
+    .toLowerCase()
+    .match(/final_([a-z0-9]{4,12})_\d+s\.mp4/i);
+  return Boolean(m && m[1].toLowerCase() !== String(taskTag || "").toLowerCase());
+}
+
 // Re-downloads the same VM file until ffmpeg has finished writing it, so "Hoàn tất" never points at a stub.
 // ponytail: re-fetches the whole file each poll; poll fs.stat size first if large renders make this slow.
 async function downloadFinishedMedia(download, { deadlineMs, pollMs = MEDIA_FINALIZE_POLL_MS, onWait }) {
@@ -2725,12 +2735,7 @@ foreach ($p in $procs) {
           for (const ref of info.mediaRefs) {
             const key = `${ref.url || ""}|${ref.path || ""}|${ref.id || ""}`;
             if (baselineMediaKeys.has(key)) continue;
-            const refPathLower = String(ref.path || ref.url || "").toLowerCase();
-            // Reject final_...mp4 belonging to a different taskTag!
-            const otherFinalMatch = refPathLower.match(/final_([a-z0-9]{4,12})_\d+s\.mp4/i);
-            if (otherFinalMatch && otherFinalMatch[1].toLowerCase() !== taskTag.toLowerCase()) {
-              continue;
-            }
+            if (isForeignFinalVideo(ref.path || ref.url, taskTag)) continue;
             if (isMatchingMediaKey(ref.url || ref.path)) {
               if (!newMediaCandidates.some((c) => c.key === key)) {
                 newMediaCandidates.push({ ...ref, key, fromPresentation: true });
@@ -2745,19 +2750,23 @@ foreach ($p in $procs) {
           for (const f of vmFiles) {
             const key = `${f.url || ""}|${f.path || ""}|${f.id || ""}`;
             const mtimeKey = `${f.url || ""}|${f.path || ""}|${f.id || ""}|${f.mtimeMs || 0}`;
-            const isFreshlyModified = f.mtimeMs && f.mtimeMs >= taskSendStartMs - 2000;
+            const fname = String(f.name || f.path || "").toLowerCase();
+            // A recently-modified file only re-enters past the baseline if it's OUR file
+            // (carries this job's tag). Otherwise a sibling/previous job's freshly-touched
+            // file would be mistaken for this job's output (root cause of "lấy nhầm video").
+            const isFreshlyModified =
+              f.mtimeMs && f.mtimeMs >= taskSendStartMs - 2000 && fname.includes(taskTag);
             if (baselineMediaKeys.has(mtimeKey) && !isFreshlyModified) continue;
             if (baselineMediaKeys.has(key) && !isFreshlyModified) continue;
-            const fname = String(f.name || f.path || "").toLowerCase();
             if (expect === "video") {
-              const otherFinalMatch = fname.match(/final_([a-z0-9]{4,12})_\d+s\.mp4/i);
-              if (otherFinalMatch && otherFinalMatch[1].toLowerCase() !== taskTag.toLowerCase()) {
-                continue;
-              }
+              if (isForeignFinalVideo(fname, taskTag)) continue;
               if (/(?:^|\/)(?:clip|seg|part|temp|tmp)\d*[_-]/i.test(fname) && stitchCmdCount < 3) {
                 continue;
               }
-              if (this.activeCount > 1 && !fname.includes(taskTag)) {
+              // vmFiles is only a fallback when the session presented nothing. Require this
+              // job's tag so we never adopt a sibling job's untagged workspace file (M5);
+              // the session-presented path above still matches a legit untagged video.
+              if (!fname.includes(taskTag)) {
                 continue;
               }
             }
@@ -2819,8 +2828,7 @@ foreach ($p in $procs) {
         const stitchedCandidate = newMediaCandidates.find((c) => {
           const p = String(c.path || c.url || "").toLowerCase();
           if (/(?:^|\/)(?:clip|seg|part|temp|tmp)\d*[_-]/i.test(p)) return false;
-          const otherFinal = p.match(/final_([a-z0-9]{4,12})_\d+s\.mp4/i);
-          if (otherFinal && otherFinal[1].toLowerCase() !== taskTag.toLowerCase()) return false;
+          if (isForeignFinalVideo(p, taskTag)) return false;
           if (p.includes(targetVmVideoName.toLowerCase()) || p.includes(`final_${taskTag.toLowerCase()}`)) {
             return true;
           }
@@ -3187,6 +3195,7 @@ module.exports = {
   MODEL_ALIASES,
   minStitchedDurationSec,
   isUnfinishedMp4,
+  isForeignFinalVideo,
   downloadFinishedMedia,
   outputFileBase,
 };
