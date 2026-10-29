@@ -209,6 +209,7 @@ class Store {
       exportDir: "",
       promptTemplateVideo: "",
       promptTemplateImage: "",
+      outputNameTemplate: "",
       autoKeepalive: true,
       showChromeWindow: false,
       headlessMode: true,

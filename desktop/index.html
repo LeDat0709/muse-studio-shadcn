@@ -955,6 +955,15 @@
               </div>
               <div class="form-row" style="margin-bottom: 0">
                 <div style="grid-column: 1 / -1">
+                  <label class="field-label">Mẫu tên file xuất (đổi tên video/ảnh khi lưu — để trống = tên tự động)</label>
+                  <input type="text" id="setOutputNameTemplate" class="input" placeholder="VD: {title}_{date} hoặc {mode}_{datetime}_{ratio}" style="font-family: var(--font-mono, monospace); font-size: 12px" />
+                  <div style="font-size: 11px; color: var(--muted-foreground); margin-top: 4px">
+                    Biến: <code>{title}</code> <code>{prompt}</code> <code>{duration}</code> <code>{ratio}</code> <code>{quality}</code> <code>{mode}</code> <code>{tag}</code> <code>{date}</code> <code>{time}</code> <code>{datetime}</code> <code>{rand}</code>. Trùng tên tự thêm "(2)". Tên bạn đặt riêng cho từng luồng vẫn được ưu tiên.
+                  </div>
+                </div>
+              </div>
+              <div class="form-row" style="margin-bottom: 0">
+                <div style="grid-column: 1 / -1">
                   <label class="field-label">Mẫu prompt Video (để trống = dùng mẫu mặc định)</label>
                   <textarea id="setPromptTemplateVideo" class="input" rows="3" placeholder="VD: Please generate and present a {duration}s MP4 video ({specs}) saved to /workspace/imagine_media/{output}: {prompt}" style="font-family: var(--font-mono, monospace); font-size: 12px"></textarea>
                 </div>

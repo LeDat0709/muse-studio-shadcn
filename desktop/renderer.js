@@ -749,6 +749,8 @@
       if (data.settings) {
         state.settings = data.settings;
         if ($("#setExportDir")) $("#setExportDir").value = data.settings.exportDir || "";
+        if ($("#setOutputNameTemplate") && document.activeElement !== $("#setOutputNameTemplate"))
+          $("#setOutputNameTemplate").value = data.settings.outputNameTemplate || "";
         if ($("#setPromptTemplateVideo") && document.activeElement !== $("#setPromptTemplateVideo"))
           $("#setPromptTemplateVideo").value = data.settings.promptTemplateVideo || "";
         if ($("#setPromptTemplateImage") && document.activeElement !== $("#setPromptTemplateImage"))
@@ -3361,6 +3363,7 @@ curl ${baseUrlV1}/videos \\
           geminiModel: $("#scriptGeminiModelSelect")?.value || "gemini-2.5-flash",
           promptTemplateVideo: $("#setPromptTemplateVideo")?.value || "",
           promptTemplateImage: $("#setPromptTemplateImage")?.value || "",
+          outputNameTemplate: $("#setOutputNameTemplate")?.value || "",
         },
       });
       if (geminiKey && $("#scriptGeminiKeyInput")) {

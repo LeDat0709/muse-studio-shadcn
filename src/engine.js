@@ -211,6 +211,24 @@ function applyPromptTemplate(tpl, vars) {
   );
 }
 
+// Builds a saved-media base filename from a user template in Settings. Adds the
+// date/time/rand placeholders, then the caller sanitises it with outputFileBase().
+// Placeholders: {title} {prompt} {duration} {ratio} {quality} {mode} {tag}
+// {date} {time} {datetime} {rand}.
+function buildTemplatedName(template, vars) {
+  const now = new Date();
+  const pad = (n) => String(n).padStart(2, "0");
+  const ymd = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const hms = `${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}`;
+  return applyPromptTemplate(template, {
+    date: ymd,
+    time: hms,
+    datetime: `${ymd.replace(/-/g, "")}_${hms}`,
+    rand: crypto.randomBytes(3).toString("hex"),
+    ...vars,
+  });
+}
+
 function mediaExtFor(mime, expect) {
   const m = String(mime || "").toLowerCase();
   if (m.includes("mp4")) return ".mp4";
@@ -3012,8 +3030,32 @@ foreach ($p in $procs) {
       if (chosenBase) {
         this.log(`[${account.name}] 🏷️ Đặt tên file ${expect.toUpperCase()} theo tên bạn đặt: "${chosenBase}"`);
       }
+      // Optional output-name template from Settings (applied only when the row has no
+      // explicit name). {title} {prompt} {duration} {ratio} {quality} {mode} {tag}
+      // {date} {time} {datetime} {rand}; reserveUniqueFile still de-dupes with "(2)".
+      let templatedBase = "";
+      const nameTpl = String((this.store.settings && this.store.settings.outputNameTemplate) || "").trim();
+      if (!chosenBase && nameTpl) {
+        templatedBase = outputFileBase(
+          buildTemplatedName(nameTpl, {
+            title: preferredMediaTitle || extractedProductTitle || "",
+            prompt: cleanPrompt,
+            duration: `${targetDurationSec}s`,
+            ratio: aspectRatio,
+            quality: qUpper,
+            mode: expect,
+            tag: taskTag,
+          })
+        );
+        if (templatedBase) {
+          this.log(`[${account.name}] 🏷️ Đặt tên file ${expect.toUpperCase()} theo mẫu: "${templatedBase}"`);
+        }
+      }
       const base =
-        chosenBase || preferredMediaTitle || `${prefix}_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
+        chosenBase ||
+        templatedBase ||
+        preferredMediaTitle ||
+        `${prefix}_${Date.now()}_${crypto.randomBytes(3).toString("hex")}`;
       const ext = mediaExtFor(mime || matchedMedia.path || matchedMedia.url, expect);
       const filename = reserveUniqueFile(this.store.mediaDir, base, ext);
       const fullPath = path.join(this.store.mediaDir, filename);
@@ -3227,6 +3269,7 @@ module.exports = {
   isUnfinishedMp4,
   isForeignFinalVideo,
   applyPromptTemplate,
+  buildTemplatedName,
   downloadFinishedMedia,
   outputFileBase,
 };
