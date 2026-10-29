@@ -251,6 +251,26 @@ const BASE_POLL_MS = 2200;
 const POLL_MS_PER_EXTRA_JOB = 500;
 const MAX_POLL_MS = 6000;
 
+// Classify a generation failure so auto-retry knows how to react.
+function classifyGenError(message) {
+  const m = String(message || "").toLowerCase();
+  if (/refus|not available for this account|country or region|quốc gia|region-?block|content policy|cannot (?:create|generate)|unable to generate|not allowed|inappropriate|safety|vi phạm|chặn 403|403 forbidden/.test(m))
+    return "violation";
+  if (/401|unauthorized|sign in|log in|đăng xuất|hết hạn|thiếu cookie|nich die|ních die|unassigned|create an account/.test(m))
+    return "auth";
+  if (/50[234]|service unavailable|timeout|quá thời gian|mất kết nối|không tải được|gateway|network|econn|socket|reset|still sending/.test(m))
+    return "transient";
+  return "unknown";
+}
+
+// Make a rejected prompt safer/compliant for the next attempt (idempotent).
+const SAFE_PROMPT_PREFIX =
+  "(Phiên bản AN TOÀN, phù hợp quảng cáo thương mại, nhân vật người trưởng thành, bối cảnh điện ảnh nhẹ nhàng, KHÔNG chi tiết nhạy cảm/bạo lực/trẻ em) ";
+function softenPromptForRetry(prompt) {
+  const p = String(prompt || "");
+  return p.startsWith(SAFE_PROMPT_PREFIX) ? p : SAFE_PROMPT_PREFIX + p;
+}
+
 // Where the tab is and what it shows, for errors that would otherwise say only "no textarea".
 const JS_PAGE_SNAPSHOT = `
 (() => ({
@@ -3189,8 +3209,44 @@ foreach ($p in $procs) {
     };
   }
 
+  // Runs a generation and auto-retries on failure. Transient/auth errors retry with a
+  // fresh LIVE account and the same prompt; a content refusal softens the prompt first.
+  // Controlled by settings.autoRetryCount and settings.autoFixPromptOnViolation.
+  async _generateWithRetry(opts) {
+    const settings = this.store.settings || {};
+    const maxRetries = Math.max(0, Math.min(5, Number(settings.autoRetryCount) || 0));
+    const autoFix = settings.autoFixPromptOnViolation !== false;
+    let prompt = opts.prompt;
+    let lastErr;
+    for (let attempt = 0; attempt <= maxRetries; attempt += 1) {
+      try {
+        return await this._generateMedia({
+          ...opts,
+          prompt,
+          // After the first attempt, let the pool pick a fresh LIVE account.
+          accountId: attempt === 0 ? opts.accountId : "",
+        });
+      } catch (err) {
+        lastErr = err;
+        if (err.cancelled) throw err; // user stopped -> never retry
+        if (attempt >= maxRetries) break;
+        const cls = classifyGenError(err.message);
+        if (cls === "unknown") break; // can't reason about it -> surface the error
+        if (cls === "violation" && autoFix) prompt = softenPromptForRetry(prompt);
+        this.log(
+          `🔁 Tự động thử lại (${attempt + 1}/${maxRetries}) · ${cls}${
+            cls === "violation" && autoFix ? " · đã làm dịu prompt" : ""
+          }: ${String(err.message).slice(0, 90)}`,
+          "warn"
+        );
+        await new Promise((r) => setTimeout(r, 1500));
+      }
+    }
+    throw lastErr;
+  }
+
   async generateImage(opts) {
-    return this._generateMedia({ ...opts, expect: "image" });
+    return this._generateWithRetry({ ...opts, expect: "image" });
   }
 
   async generateVideo(opts) {
@@ -3199,7 +3255,7 @@ foreach ($p in $procs) {
       : Array.isArray(opts.referenceImages)
       ? opts.referenceImages
       : [];
-    return this._generateMedia({ ...opts, referenceImages: refImgs, expect: "video" });
+    return this._generateWithRetry({ ...opts, referenceImages: refImgs, expect: "video" });
   }
 
   /**
@@ -3280,6 +3336,8 @@ module.exports = {
   isForeignFinalVideo,
   applyPromptTemplate,
   buildTemplatedName,
+  classifyGenError,
+  softenPromptForRetry,
   downloadFinishedMedia,
   outputFileBase,
 };

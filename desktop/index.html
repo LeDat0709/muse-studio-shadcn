@@ -958,6 +958,18 @@
                 </div>
               </div>
               <div class="form-row" style="margin-bottom: 0">
+                <div>
+                  <label class="field-label">Tự động thử lại khi lỗi (số lần, 0 = tắt)</label>
+                  <input type="number" id="setAutoRetryCount" class="input" min="0" max="5" value="2" />
+                </div>
+                <div style="display:flex; align-items:flex-end; padding-bottom:7px">
+                  <label style="display:flex; gap:8px; align-items:center; cursor:pointer; font-size:12px">
+                    <input type="checkbox" id="setAutoFixPrompt" style="margin:0" checked />
+                    Tự làm dịu prompt khi bị từ chối (vi phạm) rồi chạy lại
+                  </label>
+                </div>
+              </div>
+              <div class="form-row" style="margin-bottom: 0">
                 <div style="grid-column: 1 / -1">
                   <label class="field-label">Google Gemini API Key (Dùng tạo kịch bản AI)</label>
                   <input type="password" id="setGeminiApiKey" class="input" placeholder="AIzaSy…" />

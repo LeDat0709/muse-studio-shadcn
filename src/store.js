@@ -210,6 +210,8 @@ class Store {
       promptTemplateVideo: "",
       promptTemplateImage: "",
       outputNameTemplate: "",
+      autoRetryCount: 2,
+      autoFixPromptOnViolation: true,
       autoKeepalive: true,
       showChromeWindow: false,
       headlessMode: true,

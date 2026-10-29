@@ -779,6 +779,10 @@
           $("#setPromptTemplateVideo").value = data.settings.promptTemplateVideo || "";
         if ($("#setPromptTemplateImage") && document.activeElement !== $("#setPromptTemplateImage"))
           $("#setPromptTemplateImage").value = data.settings.promptTemplateImage || "";
+        if ($("#setAutoRetryCount") && document.activeElement !== $("#setAutoRetryCount"))
+          $("#setAutoRetryCount").value = Number(data.settings.autoRetryCount ?? 2);
+        if ($("#setAutoFixPrompt"))
+          $("#setAutoFixPrompt").checked = data.settings.autoFixPromptOnViolation !== false;
         if ($("#setMaxConcurrency") && document.activeElement !== $("#setMaxConcurrency"))
           $("#setMaxConcurrency").value = data.settings.maxConcurrency || 3;
         if ($("#setKeepaliveMin") && document.activeElement !== $("#setKeepaliveMin"))
@@ -3511,6 +3515,8 @@ curl ${baseUrlV1}/videos \\
           promptTemplateVideo: $("#setPromptTemplateVideo")?.value || "",
           promptTemplateImage: $("#setPromptTemplateImage")?.value || "",
           outputNameTemplate: $("#setOutputNameTemplate")?.value || "",
+          autoRetryCount: Number($("#setAutoRetryCount")?.value || 0),
+          autoFixPromptOnViolation: $("#setAutoFixPrompt") ? $("#setAutoFixPrompt").checked : true,
         },
       });
       settingsSavedAt = Date.now();
