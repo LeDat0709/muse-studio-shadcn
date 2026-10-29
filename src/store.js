@@ -866,16 +866,6 @@ class Store {
     const failTasks = this.tasks.filter((t) => t.status === "failed").length;
     const runningTasks = this.tasks.filter((t) => t.status === "running").length;
 
-    let mediaFiles = 0;
-    try {
-      mediaFiles = fs.readdirSync(this.mediaDir).filter((f) => {
-        const ext = path.extname(f).toLowerCase();
-        return [".png", ".jpg", ".jpeg", ".webp", ".mp4", ".webm"].includes(ext);
-      }).length;
-    } catch (_err) {
-      // ignore
-    }
-
     return {
       accounts: {
         total: totalAcc,
@@ -891,8 +881,35 @@ class Store {
         failed: failTasks,
         running: runningTasks,
       },
-      media_count: mediaFiles,
+      media_count: this._mediaCount(),
     };
+  }
+
+  // The 2s status poll calls stats(); scanning the media dir synchronously on every
+  // poll stalls the main process (bad on Windows with many files). Cache for 30s.
+  // ponytail: 30s TTL cache; call invalidateMediaCount() after saving a new file for
+  // an instant bump if the badge lag ever matters.
+  _mediaCount() {
+    const TTL_MS = 30000;
+    const now = Date.now();
+    if (this._mediaCountCache && now - this._mediaCountCache.at < TTL_MS) {
+      return this._mediaCountCache.value;
+    }
+    let count = 0;
+    try {
+      count = fs.readdirSync(this.mediaDir).filter((f) => {
+        const ext = path.extname(f).toLowerCase();
+        return [".png", ".jpg", ".jpeg", ".webp", ".mp4", ".webm"].includes(ext);
+      }).length;
+    } catch (_err) {
+      // ignore
+    }
+    this._mediaCountCache = { at: now, value: count };
+    return count;
+  }
+
+  invalidateMediaCount() {
+    this._mediaCountCache = null;
   }
 }
 

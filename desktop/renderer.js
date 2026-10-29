@@ -3496,9 +3496,19 @@ curl ${baseUrlV1}/videos \\
     applyZoom(state.zoom);
     bindEvents();
     await Promise.all([loadStatus(), loadAccounts(), loadBatchRows()]);
-    setInterval(() => {
-      loadStatus();
-    }, 2000);
+    // Adaptive poll: fast (2s) only while jobs run, slow (5s) when idle. setTimeout
+    // chaining (not setInterval) waits for each poll to finish, so a slow response
+    // never stacks up overlapping requests — keeps the UI smoother on weaker PCs.
+    const pollStatusLoop = async () => {
+      try {
+        await loadStatus();
+      } catch (_err) {
+        // keep polling
+      }
+      const busy = state.status && Number(state.status.active_tasks) > 0;
+      setTimeout(pollStatusLoop, busy ? 2000 : 5000);
+    };
+    setTimeout(pollStatusLoop, 2000);
   }
 
   document.addEventListener("DOMContentLoaded", init);

@@ -7,6 +7,7 @@ const os = require("os");
 const path = require("path");
 const {
   MuseGateway,
+  parseProxyConfig,
   encodeNoiseTransportFrame,
   encodeServiceRequestFrame,
   decodeServiceResponseFrame,
@@ -162,6 +163,44 @@ test("MuseEngine.cancelTasks cancels matching running tasks by rowId without mar
     assert.strictEqual(cancelChatCalled, 1);
     assert.strictEqual(engine.activeRunners.get(t1.id).cancelled, true);
     assert.strictEqual(engine.activeRunners.get(t2.id).cancelled, false);
+  } finally {
+    fs.rmSync(tmpDir, { recursive: true, force: true });
+  }
+});
+
+test("parseProxyConfig and Store per-account proxy persistence work across formats", () => {
+  const p1 = parseProxyConfig("103.1.2.3:8080:myuser:mypass");
+  assert.strictEqual(p1.protocol, "http");
+  assert.strictEqual(p1.host, "103.1.2.3");
+  assert.strictEqual(p1.port, 8080);
+  assert.strictEqual(p1.username, "myuser");
+  assert.strictEqual(p1.password, "mypass");
+
+  const p2 = parseProxyConfig("socks5://alice:secret@45.10.20.30:1080");
+  assert.strictEqual(p2.protocol, "socks5");
+  assert.strictEqual(p2.host, "45.10.20.30");
+  assert.strictEqual(p2.port, 1080);
+  assert.strictEqual(p2.username, "alice");
+  assert.strictEqual(p2.password, "secret");
+
+  const tmpDir = fs.mkdtempSync(path.join(os.tmpdir(), "muse-proxy-test-"));
+  try {
+    const store = new Store(tmpDir);
+    const { account: a1 } = store.addAccount("Acc1", "hatch_sess=s1", "", {
+      proxy: "1.1.1.1:8000:u1:p1",
+    });
+    const { account: a2 } = store.addAccount("Acc2", "hatch_sess=s2");
+    assert.strictEqual(a1.proxy, "1.1.1.1:8000:u1:p1");
+    assert.strictEqual(a2.proxy, "");
+
+    store.updateAccountProxy(a2.id, "socks5://2.2.2.2:1080", "2.2.2.2");
+    assert.strictEqual(store.getAccount(a2.id).proxy, "socks5://2.2.2.2:1080");
+    assert.strictEqual(store.getAccount(a2.id).proxy_ip, "2.2.2.2");
+
+    const bulkUpdated = store.bulkAssignProxies(["10.0.0.1:8080", "10.0.0.2:8080"]);
+    assert.strictEqual(bulkUpdated, 2);
+    assert.strictEqual(store.getAccount(a1.id).proxy, "10.0.0.1:8080");
+    assert.strictEqual(store.getAccount(a2.id).proxy, "10.0.0.2:8080");
   } finally {
     fs.rmSync(tmpDir, { recursive: true, force: true });
   }
