@@ -786,6 +786,13 @@ svg.lucide,
   box-shadow: var(--shadow-xs);
 }
 
+.input::placeholder,
+.textarea::placeholder {
+  /* impeccable: muted but ≥4.5:1 on dark bg (browser default dimmed --foreground to ~#757575 = 4.4:1) */
+  color: #8b93a1;
+  opacity: 1;
+}
+
 .input,
 .select {
   height: 32px;

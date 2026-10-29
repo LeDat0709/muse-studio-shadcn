@@ -7,3 +7,7 @@ graphify-out/
 .hallmark/
 desktop/.hallmark/
 
+# impeccable: per-platform native engine binaries (re-fetched by `npx impeccable install/update`)
+.claude/skills/impeccable/scripts/bin/
+.github/skills/impeccable/scripts/bin/
+
