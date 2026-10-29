@@ -1908,28 +1908,64 @@ curl ${baseUrlV1}/videos \\
     }
   }
 
+  function formatBytes(bytes) {
+    const b = Number(bytes) || 0;
+    if (b < 1024) return `${b} B`;
+    if (b < 1024 * 1024) return `${Math.round(b / 1024)} KB`;
+    if (b < 1024 * 1024 * 1024) return `${(b / 1048576).toFixed(1)} MB`;
+    return `${(b / 1073741824).toFixed(2)} GB`;
+  }
+
+  function getFilteredSortedMedia() {
+    const typeFilter = $("#mediaFilterSelect")?.value || "all";
+    const q = ($("#mediaSearchInput")?.value || "").trim().toLowerCase();
+    const sort = $("#mediaSortSelect")?.value || "newest";
+    const items = (state.media || []).filter(
+      (m) => (typeFilter === "all" || m.type === typeFilter) && (!q || m.name.toLowerCase().includes(q))
+    );
+    if (sort === "oldest") items.sort((a, b) => a.created_at - b.created_at);
+    else if (sort === "name") items.sort((a, b) => String(a.name).localeCompare(String(b.name)));
+    else if (sort === "size") items.sort((a, b) => (b.size || 0) - (a.size || 0));
+    else items.sort((a, b) => b.created_at - a.created_at);
+    return items;
+  }
+
+  function updateMediaSelCount() {
+    const n = state.mediaSelected ? state.mediaSelected.size : 0;
+    if ($("#mediaSelCount")) $("#mediaSelCount").textContent = String(n);
+  }
+
   function renderMediaGallery() {
     const grid = $("#mediaGalleryGrid");
     if (!grid) return;
-    const filter = $("#mediaFilterSelect")?.value || "all";
-    const items = state.media.filter((m) => filter === "all" || m.type === filter);
+    if (!state.mediaSelected) state.mediaSelected = new Set();
+    // Drop selections for files that no longer exist.
+    const existing = new Set((state.media || []).map((m) => m.name));
+    for (const n of [...state.mediaSelected]) if (!existing.has(n)) state.mediaSelected.delete(n);
 
+    const items = getFilteredSortedMedia();
+    const totalSize = items.reduce((s, m) => s + (m.size || 0), 0);
     if ($("#mediaStatTotal")) $("#mediaStatTotal").textContent = String(items.length);
+    if ($("#mediaStatSize")) $("#mediaStatSize").textContent = formatBytes(totalSize);
+    updateMediaSelCount();
 
     if (!items.length) {
-      grid.innerHTML = `<div class="card" style="grid-column: 1 / -1; text-align:center; padding: 36px; color: var(--muted-foreground)">Chưa có Video hoặc Ảnh nào trong thư viện.</div>`;
+      grid.innerHTML = `<div class="card" style="grid-column: 1 / -1; text-align:center; padding: 44px; color: var(--muted-foreground)">${ICON.image}<div style="margin-top:8px">Chưa có Video hoặc Ảnh nào khớp.</div></div>`;
       return;
     }
 
     grid.innerHTML = items
       .map((item) => {
-        const kb = Math.round((item.size || 0) / 1024);
+        const selected = state.mediaSelected.has(item.name);
         const vidThumbSrc =
           item.type === "video"
             ? `${item.url}${item.url.includes("?") ? "&" : "?"}s=${item.size || 0}#t=0.5`
             : item.url;
         return `
-          <div class="media-item">
+          <div class="media-item" style="position:relative${selected ? ";outline:2px solid var(--accent-strong);outline-offset:-2px" : ""}">
+            <label style="position:absolute; top:7px; left:7px; z-index:3; background:rgba(0,0,0,.55); border-radius:4px; padding:3px 4px; display:flex; cursor:pointer">
+              <input type="checkbox" data-media-select="${escapeHtml(item.name)}" ${selected ? "checked" : ""} style="margin:0; cursor:pointer" />
+            </label>
             ${
               item.type === "video"
                 ? `<video src="${escapeHtml(vidThumbSrc)}" class="media-preview" preload="metadata" playsinline muted loop onmouseover="this.play()" onmouseout="this.pause()" data-media-preview="${escapeHtml(item.url)}" data-media-type="video" data-media-name="${escapeHtml(item.name)}"></video>`
@@ -1938,19 +1974,70 @@ curl ${baseUrlV1}/videos \\
             <div class="media-meta">
               <div class="media-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
               <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:var(--muted-foreground)">
-                <span>${item.type === "video" ? "Video" : "Ảnh"} · ${kb} KB</span>
+                <span>${item.type === "video" ? "Video" : "Ảnh"} · ${formatBytes(item.size)}</span>
                 <span>${formatTimeAgo(item.created_at)}</span>
               </div>
               <div style="display:flex; gap:6px; margin-top:4px">
                 <button class="btn btn-soft btn-sm" style="flex:1" data-media-preview="${escapeHtml(item.url)}" data-media-type="${item.type}" data-media-name="${escapeHtml(item.name)}">${ICON.search}<span>Xem</span></button>
-                <a class="btn btn-sm" href="${escapeHtml(item.url)}" download="${escapeHtml(item.name)}">${ICON.download}</a>
-                <button class="btn btn-danger btn-sm" data-media-delete="${escapeHtml(item.name)}">${ICON.trash}</button>
+                <button class="btn btn-sm" data-media-copy="${escapeHtml(item.url)}" title="Copy link media">${ICON.globe}</button>
+                <a class="btn btn-sm" href="${escapeHtml(item.url)}" download="${escapeHtml(item.name)}" title="Tải về">${ICON.download}</a>
+                <button class="btn btn-danger btn-sm" data-media-delete="${escapeHtml(item.name)}" title="Xóa">${ICON.trash}</button>
               </div>
             </div>
           </div>
         `;
       })
       .join("");
+  }
+
+  async function exportSelectedMedia() {
+    const names = [...(state.mediaSelected || [])];
+    if (!names.length) return showToast("Chưa chọn file nào để xuất.", true);
+    if (window.embongDesktop && window.embongDesktop.exportMediaFiles) {
+      let targetDir = (state.settings && state.settings.exportDir) || "";
+      if (!targetDir) {
+        const r = await window.embongDesktop.chooseDownloadFolder();
+        if (r.canceled || !r.folderPath) return;
+        targetDir = r.folderPath;
+        await saveExportDir(targetDir);
+      }
+      let out = await window.embongDesktop.exportMediaFiles({ filenames: names, targetDir });
+      if (!out.ok) {
+        const r = await window.embongDesktop.chooseDownloadFolder(targetDir);
+        if (r.canceled || !r.folderPath) return showToast(out.error || "Không xuất được file", true);
+        targetDir = r.folderPath;
+        await saveExportDir(targetDir);
+        out = await window.embongDesktop.exportMediaFiles({ filenames: names, targetDir });
+      }
+      showToast(out.ok ? `Đã xuất ${out.copied} file vào: ${targetDir}` : out.error || "Không xuất được file", !out.ok);
+    } else {
+      for (const n of names) {
+        const a = document.createElement("a");
+        a.href = `/v1/media/${encodeURIComponent(n)}`;
+        a.download = n;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      }
+    }
+  }
+
+  async function deleteSelectedMedia() {
+    const names = [...(state.mediaSelected || [])];
+    if (!names.length) return showToast("Chưa chọn file nào để xóa.", true);
+    if (!confirm(`Xóa vĩnh viễn ${names.length} file đã chọn?`)) return;
+    let deleted = 0;
+    for (const n of names) {
+      try {
+        await api(`/admin/media/${encodeURIComponent(n)}`, { method: "DELETE" });
+        deleted += 1;
+      } catch (_e) {
+        // continue
+      }
+    }
+    state.mediaSelected.clear();
+    showToast(`Đã xóa ${deleted} file.`);
+    loadMedia();
   }
 
   // ==================== TASKS & LOGS ====================
@@ -3310,7 +3397,30 @@ curl ${baseUrlV1}/videos \\
 
     // Media Gallery
     $("#mediaFilterSelect")?.addEventListener("change", () => renderMediaGallery());
+    $("#mediaSortSelect")?.addEventListener("change", () => renderMediaGallery());
+    $("#mediaSearchInput")?.addEventListener("input", () => renderMediaGallery());
     $("#btnRefreshMedia")?.addEventListener("click", () => loadMedia());
+    $("#btnMediaExportSelected")?.addEventListener("click", () => exportSelectedMedia());
+    $("#btnMediaDeleteSelected")?.addEventListener("click", () => deleteSelectedMedia());
+    $("#mediaSelectAll")?.addEventListener("change", (e) => {
+      if (!state.mediaSelected) state.mediaSelected = new Set();
+      const visible = getFilteredSortedMedia();
+      if (e.target.checked) visible.forEach((m) => state.mediaSelected.add(m.name));
+      else visible.forEach((m) => state.mediaSelected.delete(m.name));
+      renderMediaGallery();
+    });
+    // Checkbox toggles update selection without a full re-render.
+    $("#mediaGalleryGrid")?.addEventListener("change", (e) => {
+      const cb = e.target.closest("[data-media-select]");
+      if (!cb) return;
+      if (!state.mediaSelected) state.mediaSelected = new Set();
+      const name = cb.getAttribute("data-media-select");
+      if (cb.checked) state.mediaSelected.add(name);
+      else state.mediaSelected.delete(name);
+      cb.closest(".media-item")?.style.setProperty("outline", cb.checked ? "2px solid var(--accent-strong)" : "none");
+      cb.closest(".media-item")?.style.setProperty("outline-offset", "-2px");
+      updateMediaSelCount();
+    });
     $("#mediaGalleryGrid")?.addEventListener("click", async (e) => {
       const prev = e.target.closest("[data-media-preview]");
       if (prev) {
@@ -3319,6 +3429,17 @@ curl ${baseUrlV1}/videos \\
           prev.dataset.mediaType,
           prev.dataset.mediaName
         );
+        return;
+      }
+      const copy = e.target.closest("[data-media-copy]");
+      if (copy) {
+        const link = location.origin + copy.getAttribute("data-media-copy");
+        try {
+          await navigator.clipboard.writeText(link);
+          showToast("Đã copy link media!");
+        } catch (_e) {
+          showToast("Không copy được link", true);
+        }
         return;
       }
       const del = e.target.closest("[data-media-delete]");

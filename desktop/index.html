@@ -763,6 +763,7 @@
               </div>
               <div class="stat-pills">
                 <span class="stat-pill accent">Tổng file: <strong id="mediaStatTotal">0</strong></span>
+                <span class="stat-pill">Dung lượng: <strong id="mediaStatSize">0</strong></span>
               </div>
             </div>
             <div class="topbar-actions">
@@ -780,6 +781,25 @@
                 <span>Mở thư mục chứa file</span>
               </button>
             </div>
+          </div>
+
+          <div class="media-toolbar" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px">
+            <input type="text" id="mediaSearchInput" class="input" placeholder="Tìm theo tên file…" style="flex:1; min-width:180px; height:30px; font-size:12px" />
+            <select id="mediaSortSelect" class="select select-compact" style="width:150px">
+              <option value="newest">Mới nhất</option>
+              <option value="oldest">Cũ nhất</option>
+              <option value="name">Tên A→Z</option>
+              <option value="size">Dung lượng</option>
+            </select>
+            <label class="btn btn-sm" style="gap:6px; cursor:pointer"><input type="checkbox" id="mediaSelectAll" style="margin:0" />Chọn tất cả</label>
+            <button class="btn btn-soft btn-sm" id="btnMediaExportSelected">
+              <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+              <span>Xuất đã chọn (<span id="mediaSelCount">0</span>)</span>
+            </button>
+            <button class="btn btn-danger btn-sm" id="btnMediaDeleteSelected">
+              <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+              <span>Xóa đã chọn</span>
+            </button>
           </div>
 
           <div class="media-grid" id="mediaGalleryGrid"></div>
