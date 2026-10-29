@@ -138,29 +138,46 @@
     return Math.max(1, Math.min(10, Number($("#promptRepeatInput")?.value) || 1));
   }
 
+  // How many streams the current input will create, in either mode.
+  function computeStreamTotal() {
+    if (state.promptMode === "lines") {
+      const lines = window.MusePromptLines.splitNamedPromptLines($("#bulkVideoPromptsInput")?.value);
+      return {
+        count: lines.length,
+        named: lines.filter((l) => l.name).length,
+        total: lines.length * promptRepeat(),
+      };
+    }
+    const hasPrompt = Boolean(String($("#bulkVideoPromptsInput")?.value || "").trim());
+    const streams = Math.max(1, Math.min(20, Number($("#promptStreamCountInput")?.value) || 1));
+    return { count: hasPrompt ? 1 : 0, named: 0, total: hasPrompt ? streams : 0 };
+  }
+
   function updatePromptHint() {
     const hint = $("#promptHint");
-    const label = $("#btnCreateStreamsLabel");
-    if (state.promptMode !== "lines") {
-      if (hint) hint.textContent = "Áp dụng cho mọi luồng chưa chạy, tự lưu khi gõ.";
-      if (label) label.textContent = "Chỉ thêm vào hàng đợi";
-      return;
-    }
-    const lines = window.MusePromptLines.splitNamedPromptLines($("#bulkVideoPromptsInput")?.value);
-    const count = lines.length;
-    const named = lines.filter((l) => l.name).length;
-    const repeat = promptRepeat();
-    const total = count * repeat;
+    const queueLabel = $("#btnCreateStreamsLabel");
+    const runLabel = $("#btnLoadAndRunLabel");
+    const { count, named, total } = computeStreamTotal();
+
     if (hint) {
-      const namedNote = named > 0 ? `, ${named} dòng có tên file` : "";
-      hint.textContent =
-        count === 0
-          ? "Chưa có prompt nào. Mỗi dòng sẽ thành một luồng; muốn đặt tên file thì gõ: tên-file | prompt"
-          : repeat > 1
-          ? `${count} prompt${namedNote}, lặp ${repeat} lần: ${total} luồng`
-          : `${count} prompt${namedNote}: ${count} luồng`;
+      if (state.promptMode !== "lines") {
+        hint.textContent =
+          total > 0
+            ? `Prompt chung → ${total} luồng (đổi ở ô "Số luồng"). Tự lưu khi gõ.`
+            : "Nhập prompt dùng chung cho mọi luồng. Tự lưu khi gõ.";
+      } else {
+        const namedNote = named > 0 ? `, ${named} dòng có tên file` : "";
+        hint.textContent =
+          count === 0
+            ? "Mỗi dòng = 1 luồng. Muốn đặt tên file: gõ  tên-file | prompt"
+            : promptRepeat() > 1
+            ? `${count} prompt${namedNote}, lặp ${promptRepeat()} lần → ${total} luồng`
+            : `${count} prompt${namedNote} → ${total} luồng`;
+      }
     }
-    if (label) label.textContent = total > 0 ? `Thêm ${total} luồng vào hàng đợi` : "Thêm vào hàng đợi";
+    // Both actions show how many streams they will make, so the outcome is clear up front.
+    if (queueLabel) queueLabel.textContent = total > 0 ? `Thêm ${total} luồng vào hàng đợi` : "Thêm vào hàng đợi";
+    if (runLabel) runLabel.textContent = total > 0 ? `Tạo & chạy ${total} luồng` : "Tạo và chạy";
   }
 
   // Each mode keeps its own text: one shared prompt, or a list with one prompt per line.
@@ -2201,6 +2218,7 @@ curl ${baseUrlV1}/videos \\
       });
     }
     $("#promptRepeatInput")?.addEventListener("input", updatePromptHint);
+    $("#promptStreamCountInput")?.addEventListener("input", updatePromptHint);
 
     // One shared prompt fills the stream count; a list adds one row per line.
     $("#btnCreateStreamsFromPrompt")?.addEventListener("click", () => {
