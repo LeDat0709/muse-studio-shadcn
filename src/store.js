@@ -207,6 +207,8 @@ class Store {
       defaultQuality: "4K",
       defaultMode: "video",
       exportDir: "",
+      promptTemplateVideo: "",
+      promptTemplateImage: "",
       autoKeepalive: true,
       showChromeWindow: false,
       headlessMode: true,

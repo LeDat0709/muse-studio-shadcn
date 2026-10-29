@@ -938,6 +938,21 @@
                   </div>
                 </div>
               </div>
+              <div class="form-row" style="margin-bottom: 0">
+                <div style="grid-column: 1 / -1">
+                  <label class="field-label">Mẫu prompt Video (để trống = dùng mẫu mặc định)</label>
+                  <textarea id="setPromptTemplateVideo" class="input" rows="3" placeholder="VD: Please generate and present a {duration}s MP4 video ({specs}) saved to /workspace/imagine_media/{output}: {prompt}" style="font-family: var(--font-mono, monospace); font-size: 12px"></textarea>
+                </div>
+              </div>
+              <div class="form-row" style="margin-bottom: 0">
+                <div style="grid-column: 1 / -1">
+                  <label class="field-label">Mẫu prompt Ảnh (để trống = dùng mẫu mặc định)</label>
+                  <textarea id="setPromptTemplateImage" class="input" rows="2" placeholder="VD: Please generate and present an image ({specs}): {prompt}" style="font-family: var(--font-mono, monospace); font-size: 12px"></textarea>
+                  <div style="font-size: 11px; color: var(--muted-foreground); margin-top: 4px">
+                    Biến thay thế: <code>{prompt}</code> <code>{duration}</code> <code>{ratio}</code> <code>{quality}</code> <code>{output}</code> <code>{clips}</code> <code>{specs}</code>. Chính sách thực thi video &amp; trích tên sản phẩm vẫn tự động được thêm vào cuối.
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

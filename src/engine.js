@@ -203,6 +203,14 @@ function outputFileBase(name) {
   return WINDOWS_RESERVED_NAME.test(base) ? `${base}_` : base;
 }
 
+// Fills a user-defined prompt template: {prompt} {duration} {ratio} {quality}
+// {output} {clips} {specs}. Unknown placeholders are left untouched.
+function applyPromptTemplate(tpl, vars) {
+  return String(tpl || "").replace(/\{(\w+)\}/g, (m, k) =>
+    Object.prototype.hasOwnProperty.call(vars, k) ? String(vars[k]) : m
+  );
+}
+
 function mediaExtFor(mime, expect) {
   const m = String(mime || "").toLowerCase();
   if (m.includes("mp4")) return ".mp4";
@@ -2478,8 +2486,30 @@ foreach ($p in $procs) {
         `(Nếu ảnh chỉ chụp sản phẩm mà hoàn toàn không có chữ tiêu đề sản phẩm nào thì in [[PRODUCT_TITLE: NONE]]).`
       : "";
 
+    // Optional user-defined prompt format from Settings. When set it replaces the built-in
+    // wrapper; the mandatory execution policy + product-title rules are still appended so
+    // generation keeps working regardless of how the user worded the template.
+    const customPromptTpl =
+      expect === "video"
+        ? String((this.store.settings && this.store.settings.promptTemplateVideo) || "").trim()
+        : String((this.store.settings && this.store.settings.promptTemplateImage) || "").trim();
+    const promptTplVars = {
+      prompt: cleanPrompt,
+      duration: targetDurationSec,
+      ratio: aspectRatio,
+      quality: qUpper,
+      output: targetVmVideoName,
+      clips: clipCount10s,
+      specs: specs.join(", "),
+    };
+
     let finalPrompt = cleanPrompt;
-    if (expect === "video") {
+    if (customPromptTpl) {
+      finalPrompt =
+        applyPromptTemplate(customPromptTpl, promptTplVars) +
+        videoExecutionPolicy +
+        productTitleInstruction;
+    } else if (expect === "video") {
       if (isLongVideo) {
         finalPrompt =
           `Please create and present a complete ${targetDurationSec}-second MP4 video (${specs.join(", ")}) for this scene: ${cleanPrompt}\n\n` +
@@ -3196,6 +3226,7 @@ module.exports = {
   minStitchedDurationSec,
   isUnfinishedMp4,
   isForeignFinalVideo,
+  applyPromptTemplate,
   downloadFinishedMedia,
   outputFileBase,
 };

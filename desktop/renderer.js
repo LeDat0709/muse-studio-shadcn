@@ -749,6 +749,10 @@
       if (data.settings) {
         state.settings = data.settings;
         if ($("#setExportDir")) $("#setExportDir").value = data.settings.exportDir || "";
+        if ($("#setPromptTemplateVideo") && document.activeElement !== $("#setPromptTemplateVideo"))
+          $("#setPromptTemplateVideo").value = data.settings.promptTemplateVideo || "";
+        if ($("#setPromptTemplateImage") && document.activeElement !== $("#setPromptTemplateImage"))
+          $("#setPromptTemplateImage").value = data.settings.promptTemplateImage || "";
         if ($("#setMaxConcurrency") && document.activeElement !== $("#setMaxConcurrency"))
           $("#setMaxConcurrency").value = data.settings.maxConcurrency || 3;
         if ($("#setKeepaliveMin") && document.activeElement !== $("#setKeepaliveMin"))
@@ -3355,6 +3359,8 @@ curl ${baseUrlV1}/videos \\
           videoTimeout: Number($("#setVideoTimeout")?.value || 600),
           geminiApiKey: geminiKey,
           geminiModel: $("#scriptGeminiModelSelect")?.value || "gemini-2.5-flash",
+          promptTemplateVideo: $("#setPromptTemplateVideo")?.value || "",
+          promptTemplateImage: $("#setPromptTemplateImage")?.value || "",
         },
       });
       if (geminiKey && $("#scriptGeminiKeyInput")) {
