@@ -3209,9 +3209,26 @@ foreach ($p in $procs) {
     };
   }
 
+  // Uses Muse's own chat model (muse-spark) to rewrite a rejected prompt into a safe,
+  // policy-compliant version that keeps the core product/scene idea. Returns null on failure.
+  async _rewritePromptWithMuse(originalPrompt) {
+    const instruction =
+      "Bạn là trợ lý viết lại prompt tạo video. Hãy viết lại prompt dưới đây thành MỘT phiên bản AN TOÀN, " +
+      "tuân thủ chính sách nội dung (không trẻ em/vị thành niên, không bạo lực/máu me, không nguy hiểm, không nhạy cảm), " +
+      "giữ nguyên ý tưởng sản phẩm và bối cảnh chính, phù hợp quảng cáo thương mại. " +
+      "CHỈ trả về đúng prompt mới, KHÔNG giải thích, KHÔNG thêm dấu ngoặc kép.\n\nPrompt gốc:\n" +
+      String(originalPrompt || "");
+    const res = await this.chatCompletion({ prompt: instruction, model: "muse-spark" });
+    const text = String((res && res.text) || "")
+      .trim()
+      .replace(/^["'`]+|["'`]+$/g, "")
+      .trim();
+    return text || null;
+  }
+
   // Runs a generation and auto-retries on failure. Transient/auth errors retry with a
-  // fresh LIVE account and the same prompt; a content refusal softens the prompt first.
-  // Controlled by settings.autoRetryCount and settings.autoFixPromptOnViolation.
+  // fresh LIVE account and the same prompt; a content refusal has Muse rewrite the prompt
+  // first. Controlled by settings.autoRetryCount and settings.autoFixPromptOnViolation.
   async _generateWithRetry(opts) {
     const settings = this.store.settings || {};
     const maxRetries = Math.max(0, Math.min(5, Number(settings.autoRetryCount) || 0));
@@ -3232,11 +3249,21 @@ foreach ($p in $procs) {
         if (attempt >= maxRetries) break;
         const cls = classifyGenError(err.message);
         if (cls === "unknown") break; // can't reason about it -> surface the error
-        if (cls === "violation" && autoFix) prompt = softenPromptForRetry(prompt);
+        let fixNote = "";
+        if (cls === "violation" && autoFix) {
+          // Ask Muse itself to rewrite the rejected prompt into a safe version;
+          // fall back to the static safe framing if the rewrite fails.
+          let rewritten = null;
+          try {
+            rewritten = await this._rewritePromptWithMuse(prompt);
+          } catch (_e) {
+            rewritten = null;
+          }
+          prompt = rewritten || softenPromptForRetry(prompt);
+          fixNote = rewritten ? " · Muse đã viết lại prompt" : " · chèn khung an toàn";
+        }
         this.log(
-          `🔁 Tự động thử lại (${attempt + 1}/${maxRetries}) · ${cls}${
-            cls === "violation" && autoFix ? " · đã làm dịu prompt" : ""
-          }: ${String(err.message).slice(0, 90)}`,
+          `🔁 Tự động thử lại (${attempt + 1}/${maxRetries}) · ${cls}${fixNote}: ${String(err.message).slice(0, 90)}`,
           "warn"
         );
         await new Promise((r) => setTimeout(r, 1500));
