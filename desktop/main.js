@@ -7,7 +7,6 @@ const { MuseServer } = require("../src/server");
 
 let mainWindow = null;
 let museServer = null;
-
 function resolveDataDir() {
   const localDir = path.resolve(__dirname, "..", "data");
   try {
@@ -19,20 +18,32 @@ function resolveDataDir() {
     // fallback
   }
 
-  const portableDir = process.env.PORTABLE_EXECUTABLE_DIR;
-  if (portableDir) {
-    try {
-      const d = path.join(portableDir, "muse-studio-data");
-      fs.mkdirSync(d, { recursive: true });
-      return d;
-    } catch (_err) {
-      // fallback
-    }
-  }
-
+  // Packaged: keep ALL data (accounts, settings, tasks, media) in a version-independent
+  // userData folder so every version/download shares the same login + video settings.
+  // (DPAPI-encrypted accounts.enc is bound to the Windows user, not the folder, so it
+  // still decrypts after moving on the same machine.)
   const userDir = path.join(app.getPath("userData"), "data");
   fs.mkdirSync(userDir, { recursive: true });
+  migrateLegacyPortableData(userDir);
   return userDir;
+}
+
+// One-time import from the old portable location (data next to the .exe). Runs only when
+// userData has no data yet and the new .exe sits in the same folder as the old data; a
+// download into a fresh folder cannot locate data left beside a previous .exe.
+function migrateLegacyPortableData(userDir) {
+  try {
+    const portableDir = process.env.PORTABLE_EXECUTABLE_DIR;
+    if (!portableDir) return;
+    const legacy = path.join(portableDir, "muse-studio-data");
+    const alreadyHaveData = fs.existsSync(path.join(userDir, "settings.json"));
+    const legacyHasData = fs.existsSync(path.join(legacy, "settings.json"));
+    if (!alreadyHaveData && legacyHasData) {
+      fs.cpSync(legacy, userDir, { recursive: true });
+    }
+  } catch (_err) {
+    // non-fatal: start fresh
+  }
 }
 
 // OS-keychain-backed (Keychain / DPAPI / libsecret) encryption for cookies at rest.

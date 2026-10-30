@@ -103,6 +103,18 @@
     return "row_" + Math.random().toString(36).slice(2, 10);
   }
 
+  function downloadJson(filename, data) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  }
+
   function escapeHtml(str) {
     return String(str || "")
       .replace(/&/g, "&amp;")
@@ -381,7 +393,8 @@
           r.accountId = accountId;
           if (accountName) r.accountName = accountName;
         }
-        if (charImg) {
+        // List mode keeps each row's own image; shared mode applies the bulk one to all.
+        if (charImg && (state.promptMode !== "lines" || !r.characterImage)) {
           r.characterImage = { ...charImg };
         }
       }
@@ -420,11 +433,14 @@
     for (const r of state.batchRows) {
       if (r.status !== "running" && !activeClientRowIds.has(r.id) && r.status !== "done") {
         r.mode = bulkMode;
-        r.prompt = fixedVidPrompt;
+        // List mode: every row keeps its own prompt/image; only shared mode fills all.
+        if (state.promptMode !== "lines") r.prompt = fixedVidPrompt;
         r.aspectRatio = aspectRatio;
         r.duration = duration;
         r.quality = quality;
-        if (charImg) r.characterImage = { ...charImg };
+        if (charImg && (state.promptMode !== "lines" || !r.characterImage)) {
+          r.characterImage = { ...charImg };
+        }
         if (accountId) r.accountId = accountId;
       }
     }
@@ -997,6 +1013,7 @@ curl ${baseUrlV1}/videos \\
                 <button class="btn btn-primary btn-sm" data-acc-action="open-chrome" data-id="${escapeHtml(acc.id)}" title="Mở cửa sổ Chrome riêng của ních này (Cổng :${portNum})">${ICON.globe}<span>Mở Chrome</span></button>
                 <button class="btn btn-soft btn-sm" data-acc-action="renew" data-id="${escapeHtml(acc.id)}" title="Mở Chrome kiểm tra LIVE / DIE và gia hạn 48h">${ICON.refresh}<span>Check Live</span></button>
                 <button class="btn btn-sm" data-acc-action="quota" data-id="${escapeHtml(acc.id)}" title="Kiểm tra Quota">${ICON.barChart}<span>Quota</span></button>
+                <button class="btn btn-sm" data-acc-action="export" data-id="${escapeHtml(acc.id)}" title="Sao chép cookie ních này (định dạng Cookie-Editor) vào clipboard">${ICON.download}<span>Cookie</span></button>
                 <button class="btn btn-sm" data-acc-action="toggle" data-id="${escapeHtml(acc.id)}">${acc.status === "disabled" ? ICON.play : ICON.pause}</button>
                 <button class="btn btn-danger btn-sm" data-acc-action="delete" data-id="${escapeHtml(acc.id)}">${ICON.trash}</button>
               </div>
@@ -1923,6 +1940,7 @@ curl ${baseUrlV1}/videos \\
     try {
       const data = await api("/admin/media");
       state.media = data.media || [];
+      state.mediaLimit = MEDIA_PAGE_SIZE;
       renderMediaGallery();
     } catch (_err) {
       // ignore
@@ -1956,6 +1974,8 @@ curl ${baseUrlV1}/videos \\
     if ($("#mediaSelCount")) $("#mediaSelCount").textContent = String(n);
   }
 
+  const MEDIA_PAGE_SIZE = 48;
+
   function renderMediaGallery() {
     const grid = $("#mediaGalleryGrid");
     if (!grid) return;
@@ -1975,7 +1995,15 @@ curl ${baseUrlV1}/videos \\
       return;
     }
 
-    grid.innerHTML = items
+    // Cap the DOM to keep many <video preload=metadata> thumbnails from lagging weak PCs.
+    const limit = state.mediaLimit || MEDIA_PAGE_SIZE;
+    const shown = items.slice(0, limit);
+    const moreBtn =
+      items.length > limit
+        ? `<div style="grid-column:1/-1; text-align:center; padding:12px"><button class="btn btn-soft" data-media-more>Xem thêm (${items.length - limit} mục nữa)</button></div>`
+        : "";
+
+    grid.innerHTML = shown
       .map((item) => {
         const selected = state.mediaSelected.has(item.name);
         const vidThumbSrc =
@@ -1990,7 +2018,7 @@ curl ${baseUrlV1}/videos \\
             ${
               item.type === "video"
                 ? `<video src="${escapeHtml(vidThumbSrc)}" class="media-preview" preload="metadata" playsinline muted loop onmouseover="this.play()" onmouseout="this.pause()" data-media-preview="${escapeHtml(item.url)}" data-media-type="video" data-media-name="${escapeHtml(item.name)}"></video>`
-                : `<img src="${escapeHtml(item.url)}" class="media-preview" data-media-preview="${escapeHtml(item.url)}" data-media-type="image" data-media-name="${escapeHtml(item.name)}" />`
+                : `<img src="${escapeHtml(item.url)}" class="media-preview" loading="lazy" data-media-preview="${escapeHtml(item.url)}" data-media-type="image" data-media-name="${escapeHtml(item.name)}" />`
             }
             <div class="media-meta">
               <div class="media-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
@@ -2008,7 +2036,7 @@ curl ${baseUrlV1}/videos \\
           </div>
         `;
       })
-      .join("");
+      .join("") + moreBtn;
   }
 
   async function exportSelectedMedia() {
@@ -2613,6 +2641,22 @@ curl ${baseUrlV1}/videos \\
       showToast(`Đã xóa ${before - state.batchRows.length} luồng đã chọn.`);
     });
 
+    $("#btnClearDoneBatch")?.addEventListener("click", () => {
+      // Only clears finished rows from the queue to lighten the UI; the media files stay in the library.
+      const isDone = (r) => r.status === "done" && !activeClientRowIds.has(r.id);
+      const doneCount = state.batchRows.filter(isDone).length;
+      if (!doneCount) {
+        showToast("Không có luồng đã hoàn thành để dọn.", true);
+        return;
+      }
+      state.batchRows = state.batchRows.filter((r) => !isDone(r));
+      sortBatchRowsByStream();
+      renderProductChips();
+      saveBatchRows();
+      renderBatchTable();
+      showToast(`Đã dọn ${doneCount} luồng đã xong khỏi hàng đợi (video vẫn lưu trong Thư viện).`);
+    });
+
     $("#btnRunSelectedBatch")?.addEventListener("click", async () => {
       if (state.batchRows.length === 0) {
         createStreamsFromPrompt();
@@ -2943,6 +2987,56 @@ curl ${baseUrlV1}/videos \\
       }
     });
 
+    $("#btnExportAccounts")?.addEventListener("click", async () => {
+      const btn = $("#btnExportAccounts");
+      try {
+        if (btn) btn.disabled = true;
+        const r = await api("/admin/accounts/export");
+        const accounts = r.accounts || [];
+        if (!accounts.length) {
+          showToast("Chưa có ních nào để xuất.", true);
+          return;
+        }
+        const stamp = new Date().toISOString().slice(0, 19).replace(/[:T]/g, "-");
+        downloadJson(`muse-accounts-${stamp}.json`, accounts);
+        showToast(`Đã xuất ${accounts.length} ních ra file JSON (cookie + proxy).`);
+      } catch (err) {
+        showToast(`Lỗi xuất ních: ${err.message}`, true);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+
+    $("#btnImportAccounts")?.addEventListener("click", () => {
+      $("#importAccountsFile")?.click();
+    });
+
+    $("#importAccountsFile")?.addEventListener("change", async (e) => {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = "";
+      if (!file) return;
+      try {
+        const parsed = JSON.parse(await file.text());
+        const accounts = Array.isArray(parsed) ? parsed : parsed.accounts || [];
+        if (!accounts.length) {
+          showToast("File không có ních hợp lệ.", true);
+          return;
+        }
+        const r = await api("/admin/accounts/import", {
+          method: "POST",
+          body: { accounts },
+        });
+        showToast(
+          `Đã nhập ${r.imported}/${r.total} ních từ file.` +
+            (r.errors && r.errors.length ? ` (${r.errors.length} lỗi)` : "")
+        );
+        await loadAccounts();
+        await loadStatus();
+      } catch (err) {
+        showToast(`Lỗi nhập ních: ${err.message}`, true);
+      }
+    });
+
     let pendingBrowserLogins = 0;
     const updateBrowserLoginButtonLabel = () => {
       const btn = $("#btnBrowserLoginCookie");
@@ -3044,6 +3138,23 @@ curl ${baseUrlV1}/videos \\
       const id = btn.dataset.id;
 
       try {
+        if (action === "export") {
+          const r = await api(`/admin/accounts/${id}/cookies`);
+          const acc = r.account || {};
+          const cookies = acc.cookies || [];
+          try {
+            await navigator.clipboard.writeText(JSON.stringify(cookies, null, 2));
+            showToast(
+              `Đã sao chép ${cookies.length} cookie của [${acc.name || id}] vào clipboard (định dạng Cookie-Editor).`
+            );
+          } catch (_clipErr) {
+            // Clipboard can be unavailable (focus/permission); always let the user get cookies out.
+            const safe = String(acc.name || id).replace(/[^\w.-]+/g, "_");
+            downloadJson(`cookie-${safe}.json`, cookies);
+            showToast(`Đã tải cookie của [${acc.name || id}] ra file (clipboard không khả dụng).`);
+          }
+          return;
+        }
         if (action === "delete") {
           await api(`/admin/accounts/${id}`, { method: "DELETE" });
           showToast("Đã xóa ních.");
@@ -3418,9 +3529,13 @@ curl ${baseUrlV1}/videos \\
     });
 
     // Media Gallery
-    $("#mediaFilterSelect")?.addEventListener("change", () => renderMediaGallery());
-    $("#mediaSortSelect")?.addEventListener("change", () => renderMediaGallery());
-    $("#mediaSearchInput")?.addEventListener("input", () => renderMediaGallery());
+    const reRenderMedia = () => {
+      state.mediaLimit = MEDIA_PAGE_SIZE;
+      renderMediaGallery();
+    };
+    $("#mediaFilterSelect")?.addEventListener("change", reRenderMedia);
+    $("#mediaSortSelect")?.addEventListener("change", reRenderMedia);
+    $("#mediaSearchInput")?.addEventListener("input", reRenderMedia);
     $("#btnRefreshMedia")?.addEventListener("click", () => loadMedia());
     $("#btnMediaExportSelected")?.addEventListener("click", () => exportSelectedMedia());
     $("#btnMediaDeleteSelected")?.addEventListener("click", () => deleteSelectedMedia());
@@ -3471,6 +3586,12 @@ curl ${baseUrlV1}/videos \\
         showToast(`Đã xóa ${name}`);
         loadMedia();
         loadStatus();
+        return;
+      }
+      const more = e.target.closest("[data-media-more]");
+      if (more) {
+        state.mediaLimit = (state.mediaLimit || MEDIA_PAGE_SIZE) + MEDIA_PAGE_SIZE;
+        renderMediaGallery();
       }
     });
 
@@ -3654,13 +3775,18 @@ curl ${baseUrlV1}/videos \\
     // chaining (not setInterval) waits for each poll to finish, so a slow response
     // never stacks up overlapping requests — keeps the UI smoother on weaker PCs.
     const pollStatusLoop = async () => {
-      try {
-        await loadStatus();
-      } catch (_err) {
-        // keep polling
+      // Skip the network + DOM work while the window is hidden (minimised / another app);
+      // just check back occasionally. Resumes the fast cadence as soon as it's visible.
+      if (!document.hidden) {
+        try {
+          await loadStatus();
+        } catch (_err) {
+          // keep polling
+        }
       }
       const busy = state.status && Number(state.status.active_tasks) > 0;
-      setTimeout(pollStatusLoop, busy ? 2000 : 5000);
+      const delay = document.hidden ? 15000 : busy ? 2000 : 5000;
+      setTimeout(pollStatusLoop, delay);
     };
     setTimeout(pollStatusLoop, 2000);
   }

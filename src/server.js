@@ -507,6 +507,32 @@ class MuseServer {
       });
     }
 
+    if (pathname === "/admin/accounts/export" && req.method === "GET") {
+      return this._sendJson(res, 200, {
+        ok: true,
+        accounts: this.store.exportAllAccounts(),
+      });
+    }
+
+    if (pathname === "/admin/accounts/import" && req.method === "POST") {
+      const body = await this._readJson(req);
+      try {
+        const result = this.store.importAccounts(body.accounts || body.list || []);
+        return this._sendJson(res, 200, { ok: true, ...result });
+      } catch (err) {
+        return this._sendJson(res, 400, { ok: false, error: err.message });
+      }
+    }
+
+    const accCookieMatch = pathname.match(/^\/admin\/accounts\/([^/]+)\/cookies$/);
+    if (accCookieMatch && req.method === "GET") {
+      const data = this.store.exportAccount(accCookieMatch[1]);
+      if (!data) {
+        return this._sendJson(res, 404, { ok: false, error: "Không tìm thấy ních" });
+      }
+      return this._sendJson(res, 200, { ok: true, account: data });
+    }
+
     if (pathname === "/admin/accounts" && req.method === "POST") {
       const body = await this._readJson(req);
       try {

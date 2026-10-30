@@ -1556,16 +1556,16 @@ input[type="checkbox"] {
 
 /* Whole lines only (line-height 1.45, 5px top padding, 2px border): two rows for one prompt, four for a list. */
 .prompt-input {
-  height: calc(2.9em + 7px);
-  min-height: calc(2.9em + 7px);
-  max-height: calc(5.8em + 7px);
+  height: calc(5.8em + 7px);
+  min-height: calc(5.8em + 7px);
+  max-height: calc(11.6em + 7px);
   padding-bottom: 0;
-  font-size: 12px;
+  font-size: 13px;
 }
 
 .prompt-input.is-lines {
-  height: calc(5.8em + 7px);
-  max-height: calc(11.6em + 7px);
+  height: calc(8.7em + 7px);
+  max-height: calc(17.4em + 7px);
 }
 
 .prompt-hint {
@@ -1903,8 +1903,8 @@ input[type="checkbox"] {
 }
 
 .preview-prompt {
-  min-height: calc(5.8em + 7px);
-  font-size: 12px;
+  min-height: calc(8.7em + 7px);
+  font-size: 13px;
 }
 
 .preview-settings {

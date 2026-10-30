@@ -503,6 +503,47 @@ class Store {
     return this.accounts.find((a) => a.id === accId) || null;
   }
 
+  // Raw cookie export (name/email/proxy + full cookie array) for backup/transfer.
+  // Callers are /admin routes gated by _isTrustedRequest, so raw cookies never leak.
+  exportAccount(accId) {
+    const a = this.getAccount(accId);
+    if (!a) return null;
+    return {
+      name: a.name,
+      email: a.email || "",
+      proxy: a.proxy || "",
+      cookies: a.cookies || [],
+    };
+  }
+
+  exportAllAccounts() {
+    return this.accounts.map((a) => ({
+      name: a.name,
+      email: a.email || "",
+      proxy: a.proxy || "",
+      cookies: a.cookies || [],
+    }));
+  }
+
+  // Restore accounts from an export file. Reuses addAccount (dedupe by fingerprint/email),
+  // so re-importing refreshes cookies on an existing ních instead of duplicating it.
+  importAccounts(list) {
+    const entries = Array.isArray(list) ? list : [];
+    let imported = 0;
+    const errors = [];
+    for (const e of entries) {
+      try {
+        const cookies = e && (e.cookies || e.cookie);
+        if (!cookies) continue;
+        this.addAccount(e.name || "", cookies, e.email || "", { proxy: e.proxy || "" });
+        imported += 1;
+      } catch (err) {
+        errors.push({ name: (e && e.name) || "", error: err.message });
+      }
+    }
+    return { imported, total: entries.length, errors };
+  }
+
   addAccount(name, cookieRaw, email = "", options = {}) {
     const expiresMap = options && options.expires ? options.expires : null;
     const cookies = Array.isArray(cookieRaw)

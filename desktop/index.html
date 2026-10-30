@@ -204,7 +204,7 @@
                 <textarea
                   id="bulkVideoPromptsInput"
                   class="textarea prompt-input"
-                  rows="2"
+                  rows="4"
                   spellcheck="false"
                   aria-describedby="promptHint"
                   placeholder="Nhập prompt dùng chung cho mọi luồng…"
@@ -401,6 +401,10 @@
                   <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                   <span>Xoá đã chọn</span>
                 </button>
+                <button class="btn btn-soft btn-sm" id="btnClearDoneBatch" type="button" title="Dọn các luồng đã hoàn thành khỏi hàng đợi cho nhẹ (video vẫn được lưu trong Thư viện media)">
+                  <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 4 12 14.01l-3-3"/><path d="M3 6h11"/><path d="M3 12h7"/><path d="M3 18h7"/></svg>
+                  <span>Dọn luồng đã xong</span>
+                </button>
               </div>
             </section>
 
@@ -494,7 +498,18 @@
                 rows="3"
                 placeholder='Dán mảng JSON từ tiện ích Cookie-Editor hoặc chuỗi "hatch_sess=...; hatch_vml=...; hatch_gw=…"'
               ></textarea>
-              <div style="display: flex; gap: 8px; margin-top: 10px; justify-content: flex-end">
+              <div style="display: flex; gap: 8px; margin-top: 10px; align-items: center; justify-content: space-between">
+                <div style="display: flex; gap: 8px">
+                  <button class="btn btn-soft btn-sm" id="btnExportAccounts" type="button" title="Tải toàn bộ ních (cookie + proxy) ra file JSON để sao lưu / chuyển máy">
+                    <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                    <span>Xuất tất cả</span>
+                  </button>
+                  <button class="btn btn-sm" id="btnImportAccounts" type="button" title="Nhập ních từ file JSON đã xuất (cookie + proxy)">
+                    <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+                    <span>Nhập từ file</span>
+                  </button>
+                  <input type="file" id="importAccountsFile" accept=".json,application/json" style="display: none" />
+                </div>
                 <button class="btn btn-primary" id="btnAddAccountManual">
                   <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                   <span>Lưu &amp; Check LIVE/DIE ngay</span>
