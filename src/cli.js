@@ -8,6 +8,7 @@ async function main() {
   const srv = new MuseServer({
     rootDir: path.resolve(__dirname, ".."),
     port,
+    autoSyncLegacy: true,
   });
   const url = await srv.start();
   console.log("=========================================================");

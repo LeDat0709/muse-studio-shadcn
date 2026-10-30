@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld("embongDesktop", {
   openExternal: (url) => ipcRenderer.invoke("embong:open-external", url),
   chooseDownloadFolder: (defaultPath) =>
     ipcRenderer.invoke("embong:choose-download-folder", defaultPath || ""),
+  chooseSyncSource: (mode) =>
+    ipcRenderer.invoke("embong:choose-sync-source", mode || "folder"),
   exportMediaFiles: (payload) => ipcRenderer.invoke("embong:export-media-files", payload),
   setZoomFactor: (factor) => {
     const f = Math.min(1.5, Math.max(0.6, Number(factor) || 1));

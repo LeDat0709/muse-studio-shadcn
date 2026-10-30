@@ -2,7 +2,13 @@
 
 const test = require("node:test");
 const assert = require("node:assert");
-const { splitPromptLines, parsePromptLine, splitNamedPromptLines } = require("../desktop/prompt-lines");
+const {
+  splitPromptLines,
+  parsePromptLine,
+  splitNamedPromptLines,
+  clampConcurrency,
+  mergePendingIntoQueue,
+} = require("../desktop/prompt-lines");
 
 test("'tên-file | prompt' names the output; the first | splits, later ones stay in the prompt", () => {
   assert.deepStrictEqual(parsePromptLine("noi-chien-01 | Cận cảnh nồi chiên"), {
@@ -54,4 +60,109 @@ test("text that only looks like a marker is kept", () => {
 test("empty input gives no prompts", () => {
   assert.deepStrictEqual(splitPromptLines("  \n\n"), []);
   assert.deepStrictEqual(splitPromptLines(undefined), []);
+});
+
+test("clampConcurrency allows custom concurrency between 1 and 50", () => {
+  assert.strictEqual(clampConcurrency(7), 7);
+  assert.strictEqual(clampConcurrency("12"), 12);
+  assert.strictEqual(clampConcurrency(0), 2);
+  assert.strictEqual(clampConcurrency(-5), 1);
+  assert.strictEqual(clampConcurrency(99), 50);
+});
+
+test("mergePendingIntoQueue enqueues waiting streams while a batch is running and can prioritize selected waiting rows", () => {
+  const r1 = { id: "r1", status: "running", prompt: "Đang chạy 1" };
+  const r2 = { id: "r2", status: "idle", prompt: "Chờ chạy 2" };
+  const r3 = { id: "r3", status: "idle", prompt: "Chờ chạy 3" };
+  const r4 = { id: "r4", status: "idle", prompt: "Chờ chạy 4" };
+
+  // r1 is running, r2 and r3 are already in the queue; user selects r3 and newly added r4 to run now
+  const out = mergePendingIntoQueue([r2, r3], [r1, r3, r4], new Set(["r1"]), { prioritize: true });
+  assert.deepStrictEqual(
+    out.queue.map((r) => r.id),
+    ["r3", "r4", "r2"]
+  );
+  assert.deepStrictEqual(
+    out.runnable.map((r) => r.id),
+    ["r3", "r4"]
+  );
+  assert.strictEqual(out.newlyQueuedCount, 1);
+});
+
+test("Store.syncFromSource merges legacy batch-rows, completed job statuses, tasks, and media between old and new versions", () => {
+  const fs = require("fs");
+  const os = require("os");
+  const path = require("path");
+  const { Store } = require("../src/store");
+
+  const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), "muse-sync-test-"));
+  const oldToolDir = path.join(tmpRoot, "old-tool", "embong-muse-data");
+  const newToolDir = path.join(tmpRoot, "new-tool", "data");
+  fs.mkdirSync(path.join(oldToolDir, "media"), { recursive: true });
+  fs.mkdirSync(newToolDir, { recursive: true });
+
+  try {
+    // Old tool has 2 jobs (one idle, one completed with video) and 1 media file
+    fs.writeFileSync(
+      path.join(oldToolDir, "batch-rows.json"),
+      JSON.stringify([
+        {
+          id: "row_old_1",
+          mode: "video",
+          prompt: "Quay sản phẩm 1",
+          status: "done",
+          mediaUrl: "/v1/media/video1.mp4",
+          filename: "video1.mp4",
+        },
+        {
+          id: "row_old_2",
+          mode: "video",
+          prompt: "Quay sản phẩm 2",
+          status: "running",
+        },
+      ])
+    );
+    fs.writeFileSync(
+      path.join(oldToolDir, "tasks.json"),
+      JSON.stringify([
+        {
+          id: "task_old_1",
+          type: "video",
+          prompt: "Quay sản phẩm 1",
+          status: "succeeded",
+          created_at: 1700000000,
+        },
+      ])
+    );
+    fs.writeFileSync(path.join(oldToolDir, "media", "video1.mp4"), "fake-mp4-bytes");
+
+    const store = new Store(newToolDir);
+    // Suppose new tool had row_old_1 still marked as idle
+    store.saveBatchRows([
+      {
+        id: "row_old_1",
+        mode: "video",
+        prompt: "Quay sản phẩm 1",
+        status: "idle",
+        mediaUrl: "",
+      },
+    ]);
+
+    const res = store.syncFromSource(path.join(tmpRoot, "old-tool"));
+    assert.strictEqual(res.addedRows, 1);
+    assert.strictEqual(res.updatedRows, 1);
+    assert.strictEqual(res.totalRows, 2);
+    assert.strictEqual(res.addedTasks, 1);
+    assert.strictEqual(res.copiedMedia, 1);
+
+    const rows = store.getBatchRows();
+    const r1 = rows.find((r) => r.id === "row_old_1");
+    const r2 = rows.find((r) => r.id === "row_old_2");
+    assert.strictEqual(r1.status, "done");
+    assert.strictEqual(r1.mediaUrl, "/v1/media/video1.mp4");
+    assert.strictEqual(r2.status, "idle"); // running in old crash -> ready to run (idle)
+    assert.ok(fs.existsSync(path.join(newToolDir, "media", "video1.mp4")));
+  } finally {
+    fs.rmSync(tmpRoot, { recursive: true, force: true });
+  }
 });

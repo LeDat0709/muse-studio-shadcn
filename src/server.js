@@ -7,6 +7,7 @@ const crypto = require("crypto");
 const { Store } = require("./store");
 const { MuseEngine, resolveModel, findChromeBinary } = require("./engine");
 const { testProxyConnection, parseProxyConfig } = require("./gateway");
+const { version: APP_VERSION } = require("../package.json");
 
 const LOOPBACK_HOSTS = new Set(["127.0.0.1", "localhost", "[::1]"]);
 const SUPPORTED_ASPECT_RATIOS = ["1:1", "16:9", "9:16", "4:3", "3:4"];
@@ -782,6 +783,83 @@ class MuseServer {
       const body = await this._readJson(req);
       const saved = this.store.saveBatchRows(body.rows || []);
       return this._sendJson(res, 200, { ok: true, count: saved.length });
+    }
+
+    if (pathname === "/admin/jobs/export" && req.method === "GET") {
+      return this._sendJson(res, 200, {
+        ok: true,
+        version: APP_VERSION,
+        exportedAt: new Date().toISOString(),
+        rows: this.store.getBatchRows(),
+        tasks: this.store.listTasks(500),
+        // Cookies stay out on purpose: job files get shared; accounts have their own export.
+      });
+    }
+
+    if (pathname === "/admin/jobs/sync" && req.method === "POST") {
+      const body = await this._readJson(req);
+      try {
+        let addedRows = 0;
+        let updatedRows = 0;
+        let addedTasks = 0;
+        let addedAccounts = 0;
+        let copiedMedia = 0;
+        const syncedSources = [];
+
+        if (Array.isArray(body.rows || body.batchRows)) {
+          const r = this.store.mergeBatchRows(body.rows || body.batchRows);
+          addedRows += r.addedRows;
+          updatedRows += r.updatedRows;
+          syncedSources.push("payload:rows");
+        }
+        if (Array.isArray(body.tasks)) {
+          const t = this.store.mergeTasks(body.tasks);
+          addedTasks += t.addedTasks;
+          syncedSources.push("payload:tasks");
+        }
+        if (Array.isArray(body.accounts)) {
+          addedAccounts += this.store.importNewAccounts(body.accounts);
+          syncedSources.push("payload:accounts");
+        }
+
+        if (body.sourcePath && String(body.sourcePath).trim()) {
+          const srcRes = this.store.syncFromSource(String(body.sourcePath).trim());
+          addedRows += srcRes.addedRows;
+          updatedRows += srcRes.updatedRows;
+          addedTasks += srcRes.addedTasks;
+          addedAccounts += srcRes.addedAccounts;
+          copiedMedia += srcRes.copiedMedia;
+          syncedSources.push(...srcRes.syncedSources);
+        }
+
+        if (body.autoDiscover !== false && !body.sourcePath && !body.rows && !body.batchRows) {
+          const autoRes = this.store.syncAllKnownSources(
+            Array.isArray(body.extraDirs) ? body.extraDirs : []
+          );
+          addedRows += autoRes.addedRows;
+          updatedRows += autoRes.updatedRows;
+          addedTasks += autoRes.addedTasks;
+          addedAccounts += autoRes.addedAccounts;
+          copiedMedia += autoRes.copiedMedia;
+          syncedSources.push(...autoRes.syncedSources);
+        }
+
+        return this._sendJson(res, 200, {
+          ok: true,
+          addedRows,
+          updatedRows,
+          totalRows: this.store.getBatchRows().length,
+          addedTasks,
+          totalTasks: this.store.tasks.length,
+          addedAccounts,
+          totalAccounts: this.store.accounts.length,
+          copiedMedia,
+          syncedSources,
+          rows: this.store.getBatchRows(),
+        });
+      } catch (err) {
+        return this._sendJson(res, 400, { ok: false, error: err.message });
+      }
     }
 
     if (pathname === "/admin/settings" && req.method === "GET") {

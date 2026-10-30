@@ -5,6 +5,10 @@ const path = require("path");
 const fs = require("fs");
 const { MuseServer } = require("../src/server");
 
+if (app && app.commandLine && typeof app.commandLine.appendSwitch === "function") {
+  app.commandLine.appendSwitch("no-sandbox");
+}
+
 let mainWindow = null;
 let museServer = null;
 function resolveDataDir() {
@@ -46,8 +50,13 @@ function migrateLegacyPortableData(userDir) {
   }
 }
 
-// OS-keychain-backed (Keychain / DPAPI / libsecret) encryption for cookies at rest.
+// OS-keychain-backed (DPAPI on Windows) encryption for cookies at rest.
+// On macOS ad-hoc builds, safeStorage triggers a blocking Keychain password modal on every repack,
+// so keep DPAPI on win32 and avoid blocking macOS startup unless MUSE_MAC_KEYCHAIN=1 is set.
 function buildSecureStore() {
+  if (process.platform === "darwin" && process.env.MUSE_MAC_KEYCHAIN !== "1") {
+    return { available: false };
+  }
   try {
     if (safeStorage && safeStorage.isEncryptionAvailable()) {
       return {
@@ -69,6 +78,7 @@ async function createMainWindow() {
     dataDir,
     port: Number(process.env.MUSE_PORT || 18638),
     secureStore: buildSecureStore(),
+    autoSyncLegacy: true,
   });
   const baseUrl = await museServer.start();
 
@@ -146,6 +156,19 @@ ipcMain.handle("embong:choose-download-folder", async (_evt, defaultPath = "") =
   });
   if (res.canceled || !res.filePaths.length) return { canceled: true };
   return { canceled: false, folderPath: res.filePaths[0] };
+});
+
+ipcMain.handle("embong:choose-sync-source", async (_evt, mode = "folder") => {
+  const isFile = mode === "file";
+  const res = await dialog.showOpenDialog(mainWindow, {
+    title: isFile
+      ? "Chọn file Job bản cũ (batch-rows.json hoặc file xuất Job .json)"
+      : "Chọn thư mục Tool bản cũ (hoặc thư mục data / embong-muse-data)",
+    properties: isFile ? ["openFile"] : ["openDirectory"],
+    ...(isFile ? { filters: [{ name: "JSON Data", extensions: ["json"] }] } : {}),
+  });
+  if (res.canceled || !res.filePaths.length) return { canceled: true };
+  return { canceled: false, sourcePath: res.filePaths[0] };
 });
 
 ipcMain.handle("embong:export-media-files", async (_evt, { filenames = [], targetDir = "" }) => {

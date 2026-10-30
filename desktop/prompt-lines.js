@@ -33,7 +33,31 @@
       .filter((p) => p.prompt);
   }
 
-  const api = { splitPromptLines, parsePromptLine, splitNamedPromptLines };
+  function clampConcurrency(val) {
+    return Math.max(1, Math.min(50, Math.round(Number(val) || 2)));
+  }
+
+  // Merges waiting/selected rows into the active batch queue without duplicating running or queued items.
+  function mergePendingIntoQueue(activeQueue, targets, runningIds, { prioritize = false } = {}) {
+    const busy = runningIds instanceof Set ? runningIds : new Set(runningIds || []);
+    const runnable = (Array.isArray(targets) ? targets : []).filter(
+      (r) => r && !busy.has(r.id) && r.status !== "running" && r.prompt && String(r.prompt).trim()
+    );
+    const targetIds = new Set(runnable.map((r) => r.id));
+    const existingIds = new Set((activeQueue || []).map((r) => r.id));
+    const newlyQueuedCount = runnable.filter((r) => !existingIds.has(r.id)).length;
+    const restQueue = (activeQueue || []).filter((r) => !targetIds.has(r.id) && !busy.has(r.id));
+    const queue = prioritize ? [...runnable, ...restQueue] : [...restQueue, ...runnable];
+    return { queue, runnable, newlyQueuedCount };
+  }
+
+  const api = {
+    splitPromptLines,
+    parsePromptLine,
+    splitNamedPromptLines,
+    clampConcurrency,
+    mergePendingIntoQueue,
+  };
   if (typeof module === "object" && module.exports) module.exports = api;
   else root.MusePromptLines = api;
 })(typeof window !== "undefined" ? window : globalThis);

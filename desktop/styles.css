@@ -1861,6 +1861,18 @@ input[type="checkbox"] {
   border-top: 1px solid var(--border);
 }
 
+.queue-concurrency {
+  padding-right: 4px;
+  border-right: 1px solid var(--border);
+}
+
+.queue-concurrency .input {
+  width: 52px;
+  height: 28px;
+  padding: 0 6px;
+  font-size: 12px;
+}
+
 .queue-footer #btnDeleteSelectedBatch {
   margin-left: auto;
 }

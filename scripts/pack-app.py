@@ -17,9 +17,18 @@ BLOCK_SIZE = 4 * 1024 * 1024
 EXCLUDED_TOP = {
     ".git",
     ".DS_Store",
+    ".agent",
+    ".claude",
+    ".github",
+    ".hallmark",
+    ".ts",
     "node_modules",
     "data",
+    "dist",
+    "graphify-out",
     "scripts",
+    "tests",
+    "tools",
     "Muse AI Studio.app",
     "Mo-App-MacBook.command",
 }
@@ -140,17 +149,17 @@ def main():
     new_asar = os.path.join(new_app, "Contents", "Resources", "app.asar")
     build_asar(root_dir, new_asar)
 
-    # 4b. Ad-hoc sign both .app bundles for Apple Silicon (M1/M2/M3/M4)
+    # 4b. Clear quarantine attributes for Apple Silicon (M1/M2/M3/M4)
     for app_bundle in (orig_app, new_app):
         if os.path.isdir(app_bundle):
             subprocess.run(["xattr", "-cr", app_bundle], check=False)
-            subprocess.run(["codesign", "--force", "--deep", "--sign", "-", app_bundle], check=False)
-    print("🔐 Đã ký số Ad-hoc (Apple Silicon M1/M2/M3/M4) cho ứng dụng.")
+    print("🔐 Đã làm sạch thuộc tính Gatekeeper (Apple Silicon M1/M2/M3/M4) cho ứng dụng.")
 
     # 5. Create 1-click MacBook launcher script
     launcher_path = os.path.join(root_dir, "Mo-App-MacBook.command")
     launcher_content = """#!/bin/bash
 set -e
+unset ELECTRON_RUN_AS_NODE
 DIR="$(cd "$(dirname "$0")" && pwd)"
 APP="$DIR/Muse AI Studio.app"
 echo "Đang làm mới tiến trình và mở Muse AI Studio v2.0 (shadcn/ui)..."
@@ -158,7 +167,7 @@ pkill -f "Muse AI Studio.app/Contents/MacOS/Electron" 2>/dev/null || true
 sleep 0.5
 xattr -cr "$APP" 2>/dev/null || true
 chmod +x "$APP/Contents/MacOS/Electron" 2>/dev/null || true
-open "$APP"
+env -u ELECTRON_RUN_AS_NODE open -a "$APP"
 """
     with open(launcher_path, "w", encoding="utf-8") as f:
         f.write(launcher_content)

@@ -135,6 +135,20 @@
   const PROMPT_SINGLE_KEY = "embong_fixed_video_prompt";
   const PROMPT_LINES_KEY = "muse_prompt_lines";
   const PROMPT_MODE_KEY = "muse_prompt_mode";
+  const CONCURRENCY_KEY = "muse_concurrency";
+
+  function clampConcurrency(val) {
+    return window.MusePromptLines.clampConcurrency(val);
+  }
+
+  function getCustomConcurrency() {
+    const raw =
+      $("#queueConcurrencyInput")?.value ||
+      $("#bulkConcurrencySelect")?.value ||
+      localStorage.getItem(CONCURRENCY_KEY) ||
+      2;
+    return clampConcurrency(raw);
+  }
 
   function getFixedVideoPrompt() {
     const el = $("#bulkVideoPromptsInput");
@@ -147,7 +161,7 @@
   }
 
   function promptRepeat() {
-    return Math.max(1, Math.min(10, Number($("#promptRepeatInput")?.value) || 1));
+    return Math.max(1, Math.min(50, Number($("#promptRepeatInput")?.value) || 1));
   }
 
   // How many streams the current input will create, in either mode.
@@ -161,7 +175,7 @@
       };
     }
     const hasPrompt = Boolean(String($("#bulkVideoPromptsInput")?.value || "").trim());
-    const streams = Math.max(1, Math.min(20, Number($("#promptStreamCountInput")?.value) || 1));
+    const streams = Math.max(1, Math.min(200, Number($("#promptStreamCountInput")?.value) || 1));
     return { count: hasPrompt ? 1 : 0, named: 0, total: hasPrompt ? streams : 0 };
   }
 
@@ -421,7 +435,7 @@
     const countInputVal = Number($("#promptStreamCountInput")?.value || 3);
     const targetCount = Math.max(
       1,
-      Math.min(20, Number(requestedCount || countInputVal || 3))
+      Math.min(200, Number(requestedCount || countInputVal || 3))
     );
     const bulkMode = $("#bulkModeSelect")?.value || "video";
     const aspectRatio = $("#bulkAspectSelect")?.value || "9:16";
@@ -801,6 +815,14 @@
           $("#setAutoFixPrompt").checked = data.settings.autoFixPromptOnViolation !== false;
         if ($("#setMaxConcurrency") && document.activeElement !== $("#setMaxConcurrency"))
           $("#setMaxConcurrency").value = data.settings.maxConcurrency || 3;
+        if (!localStorage.getItem(CONCURRENCY_KEY) && data.settings.maxConcurrency) {
+          const initConc = clampConcurrency(data.settings.maxConcurrency);
+          localStorage.setItem(CONCURRENCY_KEY, String(initConc));
+          if ($("#queueConcurrencyInput") && document.activeElement !== $("#queueConcurrencyInput"))
+            $("#queueConcurrencyInput").value = String(initConc);
+          if ($("#bulkConcurrencySelect") && document.activeElement !== $("#bulkConcurrencySelect"))
+            $("#bulkConcurrencySelect").value = String(initConc);
+        }
         if ($("#setKeepaliveMin") && document.activeElement !== $("#setKeepaliveMin"))
           $("#setKeepaliveMin").value = data.settings.keepaliveIntervalMinutes || 360;
         if ($("#setGenTimeout") && document.activeElement !== $("#setGenTimeout"))
@@ -1082,7 +1104,6 @@ curl ${baseUrlV1}/videos \\
       } else {
         state.batchRows = [];
         renderProductChips();
-        await saveBatchRows();
       }
       renderBatchTable();
     } catch (_err) {
@@ -1116,14 +1137,19 @@ curl ${baseUrlV1}/videos \\
   function updateBatchStats() {
     const total = state.batchRows.length;
     const selected = state.batchRows.filter((r) => r.selected).length;
+    const pending = state.batchRows.filter((r) => !r.status || r.status === "idle").length;
     const running = state.batchRows.filter((r) => r.status === "running").length;
     const done = state.batchRows.filter((r) => r.status === "done").length;
 
     if ($("#batchStatTotal")) $("#batchStatTotal").textContent = String(total);
     if ($("#batchStatSelected")) $("#batchStatSelected").textContent = String(selected);
+    if ($("#batchStatPending")) $("#batchStatPending").textContent = String(pending);
     if ($("#batchStatRunning")) $("#batchStatRunning").textContent = String(running);
     if ($("#batchStatDone")) $("#batchStatDone").textContent = String(done);
     if ($("#navBadgeBatch")) $("#navBadgeBatch").textContent = String(total);
+    if ($("#btnRunPendingLabel")) {
+      $("#btnRunPendingLabel").textContent = pending > 0 ? `Chạy chờ chạy (${pending})` : "Chạy chờ chạy";
+    }
   }
 
   function rowStatusBadge(row) {
@@ -1162,6 +1188,14 @@ curl ${baseUrlV1}/videos \\
   function rowSettingsSelects(row) {
     const opts = (values, current, label = (v) => v) =>
       values.map((v) => `<option value="${v}" ${current === v ? "selected" : ""}>${label(v)}</option>`).join("");
+    const liveAccounts = state.accounts.filter((a) => a.status === "live" || a.status === "active");
+    const accOpts = [
+      `<option value="" ${!row.accountId ? "selected" : ""}>Xoay vòng ních LIVE</option>`,
+      ...liveAccounts.map(
+        (a) =>
+          `<option value="${escapeHtml(a.id)}" ${row.accountId === a.id ? "selected" : ""}>${escapeHtml(a.name)} (${a.use_count || 0})</option>`
+      ),
+    ].join("");
     return `
       <div><label class="field-label" for="previewMode">Loại</label>
         <select id="previewMode" class="select row-mode-select" data-id="${row.id}">
@@ -1172,7 +1206,9 @@ curl ${baseUrlV1}/videos \\
       <div><label class="field-label" for="previewDuration">Thời lượng</label>
         <select id="previewDuration" class="select row-duration-select" data-id="${row.id}">${opts(DURATION_OPTIONS, row.duration || "20s")}</select></div>
       <div><label class="field-label" for="previewQuality">Độ phân giải</label>
-        <select id="previewQuality" class="select row-quality-select" data-id="${row.id}">${opts(QUALITY_OPTIONS, row.quality || "4K")}</select></div>`;
+        <select id="previewQuality" class="select row-quality-select" data-id="${row.id}">${opts(QUALITY_OPTIONS, row.quality || "4K")}</select></div>
+      <div style="grid-column: 1 / -1"><label class="field-label" for="previewAccount">Tài khoản chạy luồng này</label>
+        <select id="previewAccount" class="select row-account-select" data-id="${row.id}">${accOpts}</select></div>`;
   }
 
   function rowMeta(row, idx) {
@@ -1412,8 +1448,30 @@ curl ${baseUrlV1}/videos \\
   }
 
   let activeBatchQueue = [];
+  let activeWorkerCount = 0;
+  const batchTargets = new Set();
   let batchGeneration = 0;
   let lastClickedCheckRowId = "";
+
+  function syncConcurrencyInputs(val, { saveServer = false, normalizeActive = false } = {}) {
+    const n = clampConcurrency(val);
+    localStorage.setItem(CONCURRENCY_KEY, String(n));
+    for (const sel of ["#queueConcurrencyInput", "#bulkConcurrencySelect", "#setMaxConcurrency"]) {
+      const el = $(sel);
+      if (el && (normalizeActive || document.activeElement !== el)) {
+        el.value = String(n);
+      }
+    }
+    if (saveServer) {
+      settingsSavedAt = Date.now();
+      if (state.settings) state.settings.maxConcurrency = n;
+      api("/admin/settings", { method: "POST", body: { maxConcurrency: n } }).catch(() => {});
+    }
+    if (state.batchRunning && activeBatchQueue.length > 0) {
+      spawnBatchWorkers(batchGeneration, n);
+    }
+    return n;
+  }
 
   async function stopRows(targetRows, { silent = false, cancelAllServer = false } = {}) {
     const rows = Array.isArray(targetRows) ? targetRows.filter(Boolean) : [];
@@ -1430,6 +1488,7 @@ curl ${baseUrlV1}/videos \\
       r.progressPct = 0;
       r.progressText = "Đã dừng";
       activeClientRowIds.delete(r.id);
+      batchTargets.delete(r);
       delete r.jobId;
     }
 
@@ -1441,6 +1500,8 @@ curl ${baseUrlV1}/videos \\
     if (cancelAllServer) {
       batchGeneration += 1;
       activeBatchQueue = [];
+      activeWorkerCount = 0;
+      batchTargets.clear();
       activeClientRowIds.clear();
       state.batchRunning = false;
     } else if (activeClientRowIds.size === 0 && activeBatchQueue.length === 0) {
@@ -1602,6 +1663,9 @@ curl ${baseUrlV1}/videos \\
     }
     if (activeClientRowIds.has(row.id) || row.status === "running") {
       return;
+    }
+    if (activeBatchQueue.length > 0) {
+      activeBatchQueue = activeBatchQueue.filter((item) => item.id !== row.id);
     }
     row.cancelledByUser = false;
     // A newer run or a stop replaces the token; this run then stops touching the row.
@@ -1766,102 +1830,35 @@ curl ${baseUrlV1}/videos \\
         await api("/admin/chrome/close", { method: "POST" }).catch(() => {});
         loadStatus();
       }
+      // A manual row that outlives the batch workers must close the batch itself (it no-ops otherwise).
+      if (!options.fromBatch && state.batchRunning) {
+        await finishBatchRun(batchGeneration);
+      }
     }
   }
 
-  async function runSelectedBatch() {
-    if (state.batchRunning && activeBatchQueue.length > 0) {
-      showToast("Đang có tiến trình chạy hàng loạt đang thực thi!", true);
-      return;
-    }
-    sortBatchRowsByStream();
-    renderProductChips();
-
-    // Recover any stale "running" status or empty "done" status on rows that aren't actively managed by this client
-    for (const r of state.batchRows) {
+  async function finishBatchRun(batchId) {
+    try {
       if (
-        (r.status === "running" && !activeClientRowIds.has(r.id)) ||
-        (r.status === "done" && !r.mediaUrl)
+        batchId !== batchGeneration ||
+        activeWorkerCount > 0 ||
+        activeBatchQueue.length > 0 ||
+        activeClientRowIds.size > 0
       ) {
-        r.status = r.mediaUrl ? "done" : "idle";
+        return;
       }
-    }
-
-    const runnableRows = state.batchRows.filter(
-      (r) => !activeClientRowIds.has(r.id) && r.status !== "running" && r.prompt && r.prompt.trim()
-    );
-
-    // 1. Check explicitly selected rows
-    const selectedRows = runnableRows.filter((r) => r.selected);
-    const selectedPending = selectedRows.filter((r) => r.status !== "done");
-
-    let targets = [];
-    if (selectedPending.length > 0) {
-      targets = selectedPending;
-    } else if (selectedRows.length > 0) {
-      // Only "done" rows were selected -> user wants to re-run them
-      targets = selectedRows;
-    } else {
-      // Nothing was checked -> auto-select all pending (non-done) rows and run them!
-      const allPending = runnableRows.filter((r) => r.status !== "done");
-      if (allPending.length > 0) {
-        allPending.forEach((r) => {
-          r.selected = true;
-        });
-        targets = allPending;
-      }
-    }
-
-    saveBatchRows();
-    renderBatchTable();
-
-    if (!targets.length) {
-      if (activeClientRowIds.size > 0) {
-        showToast(`Đang có ${activeClientRowIds.size} luồng đang chạy!`, true);
-      } else {
-        showToast("Vui lòng tích chọn ít nhất 1 luồng (hoặc thêm sản phẩm mới) để chạy!", true);
-      }
-      return;
-    }
-
-    state.batchRunning = true;
-    const configuredConcurrency = Math.max(1, Number($("#bulkConcurrencySelect")?.value || 2));
-    // The dropdown is a cap: extra rows wait in the queue instead of opening more Chrome tabs.
-    const streamConcurrency = Math.min(configuredConcurrency, targets.length);
-
-    showToast(
-      `Bắt đầu chạy ${targets.length} Luồng (tối đa ${streamConcurrency} luồng song song)...`
-    );
-
-    const batchId = ++batchGeneration;
-    activeBatchQueue = [...targets];
-    const workers = Array.from(
-      { length: Math.min(streamConcurrency, activeBatchQueue.length) },
-      async () => {
-        while (activeBatchQueue.length > 0 && state.batchRunning && batchId === batchGeneration) {
-          const item = activeBatchQueue.shift();
-          if (item && state.batchRows.includes(item)) {
-            await runSingleRow(item, { fromBatch: true });
-          }
-        }
-      }
-    );
-    await Promise.all(workers);
-    if (batchId !== batchGeneration) return;
-
-    if (activeClientRowIds.size === 0) {
       const wasRunning = state.batchRunning;
       state.batchRunning = false;
-      activeBatchQueue = [];
+      const targets = Array.from(batchTargets).filter((r) => state.batchRows.includes(r));
+      batchTargets.clear();
+      renderBatchTable();
       await api("/admin/chrome/close", { method: "POST" }).catch(() => {});
-      loadStatus();
-      if (wasRunning) {
+      await loadStatus();
+      if (wasRunning && targets.length > 0) {
         const doneCount = targets.filter((r) => r.status === "done" && r.mediaUrl).length;
         const errCount = targets.filter((r) => r.status === "error").length;
         if (errCount === 0 && doneCount > 0) {
-          showToast(
-            `Đã hoàn tất ${doneCount}/${targets.length} Luồng sản xuất Video!`
-          );
+          showToast(`Đã hoàn tất ${doneCount}/${targets.length} Luồng sản xuất Video!`);
         } else if (errCount > 0) {
           showToast(
             `Đã xử lý xong: Hoàn tất ${doneCount}/${targets.length} luồng, lỗi ${errCount} luồng.`,
@@ -1869,6 +1866,208 @@ curl ${baseUrlV1}/videos \\
           );
         }
       }
+    } catch (_err) {
+      // ignore
+    }
+  }
+
+  function spawnBatchWorkers(batchId, targetConcurrency = getCustomConcurrency()) {
+    const cap = clampConcurrency(targetConcurrency);
+    const canSpawn = Math.max(0, Math.min(cap - activeWorkerCount, activeBatchQueue.length));
+    for (let i = 0; i < canSpawn; i += 1) {
+      activeWorkerCount += 1;
+      (async () => {
+        try {
+          while (
+            activeBatchQueue.length > 0 &&
+            state.batchRunning &&
+            batchId === batchGeneration
+          ) {
+            const item = activeBatchQueue.shift();
+            if (
+              item &&
+              state.batchRows.includes(item) &&
+              item.status !== "running" &&
+              !activeClientRowIds.has(item.id)
+            ) {
+              renderBatchTable();
+              await runSingleRow(item, { fromBatch: true });
+            }
+            if (activeWorkerCount > getCustomConcurrency()) {
+              break;
+            }
+          }
+        } catch (_err) {
+          // handled inside runSingleRow
+        } finally {
+          activeWorkerCount = Math.max(0, activeWorkerCount - 1);
+          renderBatchTable();
+          if (
+            batchId === batchGeneration &&
+            activeWorkerCount === 0 &&
+            activeBatchQueue.length === 0 &&
+            activeClientRowIds.size === 0
+          ) {
+            await finishBatchRun(batchId);
+          }
+        }
+      })();
+    }
+  }
+
+  async function enqueueAndRunRows(targets, { forceStartWhenBusy = false, prioritize = false } = {}) {
+    try {
+      const validTargets = (Array.isArray(targets) ? targets : []).filter((r) =>
+        state.batchRows.includes(r)
+      );
+      const { queue, runnable, newlyQueuedCount } = window.MusePromptLines.mergePendingIntoQueue(
+        activeBatchQueue,
+        validTargets,
+        activeClientRowIds,
+        { prioritize }
+      );
+      if (!runnable.length) return;
+
+      for (const r of runnable) {
+        if (r.status === "done" || r.status === "error") {
+          r.status = "idle";
+          r.error = "";
+        }
+        batchTargets.add(r);
+      }
+
+      activeBatchQueue = queue;
+
+      saveBatchRows();
+      renderBatchTable();
+
+      const configured = getCustomConcurrency();
+      const wasRunning = state.batchRunning && (activeWorkerCount > 0 || activeClientRowIds.size > 0);
+      if (!state.batchRunning) {
+        state.batchRunning = true;
+        batchGeneration += 1;
+      }
+
+      const busySlots = Math.max(activeWorkerCount, activeClientRowIds.size);
+      if (wasRunning && busySlots >= configured && (forceStartWhenBusy || newlyQueuedCount === 0)) {
+        const extraToStart = Math.min(runnable.length, configured);
+        const boostedConcurrency = clampConcurrency(busySlots + extraToStart);
+        spawnBatchWorkers(batchGeneration, boostedConcurrency);
+        showToast(
+          `Đã kích hoạt chạy ngay ${extraToStart} luồng đang chờ (đang chạy song song ${Math.max(
+            activeWorkerCount,
+            activeClientRowIds.size
+          )} luồng)!`
+        );
+      } else {
+        const streamConcurrency = Math.min(configured, activeBatchQueue.length + busySlots);
+        spawnBatchWorkers(batchGeneration, configured);
+        if (wasRunning) {
+          showToast(
+            `Đã đưa ${runnable.length} luồng chờ vào tiến trình chạy (tối đa ${configured} luồng song song)...`
+          );
+        } else {
+          showToast(
+            `Bắt đầu chạy ${runnable.length} Luồng (tối đa ${streamConcurrency} luồng song song)...`
+          );
+        }
+      }
+    } catch (err) {
+      showToast(err.message || String(err), true);
+    }
+  }
+
+  async function runPendingBatch() {
+    try {
+      sortBatchRowsByStream();
+      renderProductChips();
+
+      for (const r of state.batchRows) {
+        if (
+          (r.status === "running" && !activeClientRowIds.has(r.id)) ||
+          (r.status === "done" && !r.mediaUrl)
+        ) {
+          r.status = r.mediaUrl ? "done" : "idle";
+        }
+      }
+
+      const pendingRows = state.batchRows.filter(
+        (r) =>
+          (!r.status || r.status === "idle") &&
+          !activeClientRowIds.has(r.id) &&
+          r.prompt &&
+          r.prompt.trim()
+      );
+
+      if (!pendingRows.length) {
+        showToast("Hiện không có luồng nào đang ở trạng thái Chờ chạy!", true);
+        return;
+      }
+
+      const selectedPending = pendingRows.filter((r) => r.selected);
+      const targets = selectedPending.length > 0 ? selectedPending : pendingRows;
+
+      await enqueueAndRunRows(targets, { forceStartWhenBusy: true, prioritize: true });
+    } catch (err) {
+      showToast(err.message || String(err), true);
+    }
+  }
+
+  async function runSelectedBatch({ forceStartWhenBusy = false } = {}) {
+    try {
+      sortBatchRowsByStream();
+      renderProductChips();
+
+      // Recover any stale "running" status or empty "done" status on rows that aren't actively managed by this client
+      for (const r of state.batchRows) {
+        if (
+          (r.status === "running" && !activeClientRowIds.has(r.id)) ||
+          (r.status === "done" && !r.mediaUrl)
+        ) {
+          r.status = r.mediaUrl ? "done" : "idle";
+        }
+      }
+
+      const runnableRows = state.batchRows.filter(
+        (r) => !activeClientRowIds.has(r.id) && r.status !== "running" && r.prompt && r.prompt.trim()
+      );
+
+      // 1. Check explicitly selected rows
+      const selectedRows = runnableRows.filter((r) => r.selected);
+      const selectedPending = selectedRows.filter((r) => r.status !== "done");
+
+      let targets = [];
+      if (selectedPending.length > 0) {
+        targets = selectedPending;
+      } else if (selectedRows.length > 0) {
+        // Only "done" rows were selected -> user wants to re-run them
+        targets = selectedRows;
+      } else {
+        // Nothing was checked -> auto-select all pending (non-done) rows and run them!
+        const allPending = runnableRows.filter((r) => r.status !== "done");
+        if (allPending.length > 0) {
+          allPending.forEach((r) => {
+            r.selected = true;
+          });
+          targets = allPending;
+        }
+      }
+
+      saveBatchRows();
+      renderBatchTable();
+
+      if (!targets.length) {
+        if (activeClientRowIds.size > 0) {
+          showToast(`Đang có ${activeClientRowIds.size} luồng đang chạy!`, true);
+        } else {
+          showToast("Vui lòng tích chọn ít nhất 1 luồng (hoặc thêm sản phẩm mới) để chạy!", true);
+        }
+        return;
+      }
+
+      await enqueueAndRunRows(targets, { forceStartWhenBusy, prioritize: true });
+    } catch (err) {
+      showToast(err.message || String(err), true);
     }
   }
 
@@ -2288,7 +2487,10 @@ curl ${baseUrlV1}/videos \\
     $("#btnPromptUploadProducts")?.addEventListener("click", triggerBulkProductUpload);
 
     $("#btnLoadAndRunBulk")?.addEventListener("click", async () => {
-      if (state.batchRows.length === 0) {
+      const hasPending = state.batchRows.some(
+        (r) => (!r.status || r.status === "idle") && !activeClientRowIds.has(r.id)
+      );
+      if (state.batchRows.length === 0 || !hasPending) {
         if (state.promptMode === "lines") addRowsFromPromptLines();
         else createStreamsFromPrompt();
       } else {
@@ -2612,6 +2814,121 @@ curl ${baseUrlV1}/videos \\
       bulkApplyPromptToSelected();
     });
 
+    const applySyncedJobResult = async (res, sourceLabel = "tool bản cũ") => {
+      await Promise.all([loadBatchRows(), loadAccounts(), loadStatus()]);
+      const summary = [
+        res.addedRows ? `+${res.addedRows} Job mới` : "",
+        res.updatedRows ? `cập nhật ${res.updatedRows} Job` : "",
+        res.addedAccounts ? `+${res.addedAccounts} Ních` : "",
+        res.copiedMedia ? `+${res.copiedMedia} Media` : "",
+      ]
+        .filter(Boolean)
+        .join(", ");
+      showToast(
+        summary
+          ? `Đã đồng bộ từ ${sourceLabel}: ${summary} (Tổng: ${res.totalRows || state.batchRows.length} luồng).`
+          : `Đã đồng bộ ${sourceLabel} — tất cả ${res.totalRows || state.batchRows.length} luồng đã khớp bản mới!`
+      );
+    };
+
+    // Sync reloads state.batchRows with fresh objects; running/queued rows would then update detached
+    // copies and finished videos would vanish from the table.
+    const refuseSyncWhileRunning = () => {
+      if (!state.batchRunning && activeClientRowIds.size === 0) return false;
+      showToast("Hãy dừng các luồng đang chạy trước khi đồng bộ / nhập Job!", true);
+      return true;
+    };
+
+    $("#btnSyncOldJobs")?.addEventListener("click", async () => {
+      if (refuseSyncWhileRunning()) return;
+      const btn = $("#btnSyncOldJobs");
+      if (btn) btn.disabled = true;
+      try {
+        await saveBatchRows();
+        const res = await api("/admin/jobs/sync", {
+          method: "POST",
+          body: { autoDiscover: true },
+        });
+        await applySyncedJobResult(res, "các thư mục tool cũ trên máy");
+      } catch (err) {
+        showToast(`Lỗi đồng bộ Job bản cũ: ${err.message}`, true);
+      } finally {
+        if (btn) btn.disabled = false;
+      }
+    });
+
+    $("#btnImportJobsSource")?.addEventListener("click", async (e) => {
+      if (refuseSyncWhileRunning()) return;
+      try {
+        await saveBatchRows();
+        if (
+          window.embongDesktop &&
+          typeof window.embongDesktop.chooseSyncSource === "function" &&
+          !e.shiftKey
+        ) {
+          const picked = await window.embongDesktop.chooseSyncSource("folder");
+          if (picked && !picked.canceled && picked.sourcePath) {
+            const res = await api("/admin/jobs/sync", {
+              method: "POST",
+              body: { sourcePath: picked.sourcePath, autoDiscover: false },
+            });
+            await applySyncedJobResult(res, picked.sourcePath);
+          }
+          return;
+        }
+        $("#hiddenJobsJsonInput")?.click();
+      } catch (err) {
+        showToast(`Lỗi nhập Job: ${err.message}`, true);
+      }
+    });
+
+    $("#hiddenJobsJsonInput")?.addEventListener("change", async (e) => {
+      const file = e.target.files?.[0];
+      e.target.value = "";
+      if (!file || refuseSyncWhileRunning()) return;
+      try {
+        const text = await file.text();
+        const parsed = JSON.parse(text);
+        const payload = Array.isArray(parsed)
+          ? { rows: parsed, autoDiscover: false }
+          : {
+              rows: parsed.rows || parsed.batchRows || [],
+              tasks: parsed.tasks || [],
+              accounts: parsed.accounts || [],
+              autoDiscover: false,
+            };
+        const res = await api("/admin/jobs/sync", {
+          method: "POST",
+          body: payload,
+        });
+        await applySyncedJobResult(res, file.name);
+      } catch (err) {
+        showToast(`File JSON Job không hợp lệ: ${err.message}`, true);
+      }
+    });
+
+    $("#btnExportJobsFile")?.addEventListener("click", async () => {
+      try {
+        await saveBatchRows();
+        const res = await api("/admin/jobs/export");
+        const blob = new Blob([JSON.stringify(res, null, 2)], {
+          type: "application/json;charset=utf-8",
+        });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        const stamp = new Date().toISOString().slice(0, 10);
+        a.href = url;
+        a.download = `muse-studio-jobs-${stamp}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+        showToast(`Đã xuất ${state.batchRows.length} luồng Job ra file JSON!`);
+      } catch (err) {
+        showToast(`Lỗi xuất Job: ${err.message}`, true);
+      }
+    });
+
     $("#btnStopSelectedBatch")?.addEventListener("click", () => {
       stopSelectedBatch();
     });
@@ -2661,8 +2978,22 @@ curl ${baseUrlV1}/videos \\
       if (state.batchRows.length === 0) {
         createStreamsFromPrompt();
       }
-      await runSelectedBatch();
+      await runSelectedBatch({ forceStartWhenBusy: true });
     });
+    $("#btnRunPendingBatch")?.addEventListener("click", async () => {
+      await runPendingBatch();
+    });
+    const onConcurrencyInput = (e) => {
+      syncConcurrencyInputs(e.target.value, { saveServer: false });
+    };
+    const onConcurrencyCommit = (e) => {
+      const n = syncConcurrencyInputs(e.target.value, { saveServer: true, normalizeActive: true });
+      showToast(`Đã đặt số luồng chạy song song: ${n} luồng.`);
+    };
+    $("#queueConcurrencyInput")?.addEventListener("input", onConcurrencyInput);
+    $("#queueConcurrencyInput")?.addEventListener("change", onConcurrencyCommit);
+    $("#bulkConcurrencySelect")?.addEventListener("input", onConcurrencyInput);
+    $("#bulkConcurrencySelect")?.addEventListener("change", onConcurrencyCommit);
     $("#btnDownloadSelectedBatch")?.addEventListener("click", () => downloadSelectedBatch());
     $("#btnRetryErrored")?.addEventListener("click", () => retryErroredRows());
     $("#btnSelectErrored")?.addEventListener("click", () => selectVisible((r) => r.status === "error"));
@@ -2738,6 +3069,12 @@ curl ${baseUrlV1}/videos \\
         renderBatchTable();
       } else if (t.classList.contains("row-quality-select")) {
         row.quality = t.value;
+        saveBatchRows();
+        renderBatchTable();
+      } else if (t.classList.contains("row-account-select")) {
+        row.accountId = t.value;
+        const accObj = state.accounts.find((a) => a.id === t.value);
+        row.accountName = accObj ? accObj.name : "";
         saveBatchRows();
         renderBatchTable();
       }
@@ -3624,10 +3961,14 @@ curl ${baseUrlV1}/videos \\
         $("#setGeminiApiKey")?.value.trim() ||
         $("#scriptGeminiKeyInput")?.value.trim() ||
         "";
+      const maxConc = syncConcurrencyInputs($("#setMaxConcurrency")?.value || 3, {
+        saveServer: false,
+        normalizeActive: true,
+      });
       await api("/admin/settings", {
         method: "POST",
         body: {
-          maxConcurrency: Number($("#setMaxConcurrency")?.value || 3),
+          maxConcurrency: maxConc,
           keepaliveIntervalMinutes: Number($("#setKeepaliveMin")?.value || 360),
           genTimeout: Number($("#setGenTimeout")?.value || 180),
           videoTimeout: Number($("#setVideoTimeout")?.value || 600),
@@ -3767,6 +4108,7 @@ curl ${baseUrlV1}/videos \\
       el.setAttribute("spellcheck", "false");
     });
     initFixedPrompts();
+    syncConcurrencyInputs(localStorage.getItem(CONCURRENCY_KEY) || 2, { normalizeActive: true });
     applyTheme(state.theme);
     applyZoom(state.zoom);
     bindEvents();
