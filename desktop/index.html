@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Muse AI Studio (Node.js, shadcn/ui)</title>
+    <title>Muse AI Studio</title>
     <meta name="description" content="Muse AI Studio: queue and run batches of Muse.ai video and image renders, manage accounts and serve an OpenAI-compatible API on this machine." />
     <link rel="icon" href="assets/icon.ico" />
     <link rel="stylesheet" href="styles.css" />
@@ -19,9 +19,9 @@
           <div class="brand-meta">
             <div class="brand-title-row">
               <span class="brand-title">Muse AI Studio</span>
-              <span class="brand-badge">v2.0</span>
+              <span class="brand-badge" id="appVersionBadge"></span>
             </div>
-            <div class="brand-subtitle">HTTP, Noise-XX, shadcn/ui</div>
+            <div class="brand-subtitle">Video &amp; ảnh hàng loạt</div>
           </div>
         </div>
 
@@ -56,17 +56,7 @@
             </span>
           </button>
 
-          <button class="nav-item" data-view="media">
-            <span class="nav-item-left">
-              <span class="nav-icon">
-                <svg aria-hidden="true" class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-              </span>
-              <span>Thư viện Media</span>
-            </span>
-            <span class="nav-badge" id="navBadgeMedia">0</span>
-          </button>
-
-          <div class="side-nav-label" style="margin-top: 8px">Hệ thống &amp; Developer</div>
+          <div class="side-nav-label" style="margin-top: 8px">Hệ thống</div>
 
           <button class="nav-item" data-view="tasks">
             <span class="nav-item-left">
@@ -83,7 +73,7 @@
               <span class="nav-icon">
                 <svg aria-hidden="true" class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.85" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
               </span>
-              <span>Cổng API (/v1) &amp; Cài đặt</span>
+              <span>Cổng API &amp; Cài đặt</span>
             </span>
           </button>
         </nav>
@@ -91,12 +81,12 @@
         <div class="sidebar-card">
           <div class="sidebar-card-title">
             <svg aria-hidden="true" class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg>
-            <span>Trạng thái Engine</span>
+            <span>Trạng thái</span>
           </div>
           <div class="sidebar-stat-row">
-            <span>Giao thức</span>
+            <span>Máy chủ</span>
             <span id="sideCdpStatus">
-              <span class="status-dot"></span>HTTP + Noise-XX
+              Đang kết nối…
             </span>
           </div>
           <div class="sidebar-stat-row">
@@ -118,9 +108,9 @@
           <div class="zoom-row">
             <span class="zoom-label">Tỉ lệ hiển thị</span>
             <div class="zoom-controls">
-              <button class="zoom-btn" id="zoomOutBtn" title="Thu nhỏ (Cmd/Ctrl -)">−</button>
+              <button class="zoom-btn" id="zoomOutBtn" title="Thu nhỏ (Cmd/Ctrl -)" aria-label="Thu nhỏ"><svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/></svg></button>
               <span class="zoom-val" id="zoomValueText" style="cursor: pointer" title="Đặt lại 100% (Cmd/Ctrl 0)">100%</span>
-              <button class="zoom-btn" id="zoomInBtn" title="Phóng to (Cmd/Ctrl +)">＋</button>
+              <button class="zoom-btn" id="zoomInBtn" title="Phóng to (Cmd/Ctrl +)" aria-label="Phóng to"><svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg></button>
             </div>
           </div>
           <button class="theme-btn" id="themeToggleBtn">
@@ -142,7 +132,7 @@
                 <span class="view-title-icon">
                   <svg aria-hidden="true" class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.3Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 4"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>
                 </span>
-                <span>Sản xuất Video &amp; Ảnh hàng loạt</span>
+                <span>Sản xuất hàng loạt</span>
               </div>
               <div class="stat-pills">
                 <span class="stat-pill">Tổng: <strong id="batchStatTotal">0</strong></span>
@@ -249,9 +239,9 @@
                       <span class="bulk-ref-divider"></span>
 
                       <div class="bulk-ref-slot" style="flex: 1; min-width: 0">
-                        <button class="btn btn-brand btn-sm" id="btnUploadBulkProduct" type="button" style="padding: 0 9px">
+                        <button class="btn btn-soft btn-sm" id="btnUploadBulkProduct" type="button" style="padding: 0 9px" title="Chọn nhiều ảnh sản phẩm, mỗi sản phẩm thành một luồng">
                           <svg aria-hidden="true" class="lucide" width="12.5" height="12.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 16h6"/><path d="M19 13v6"/><path d="M21 10V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l2-1.14"/><path d="m7.5 4.27 9 5.15"/><polyline points="3.29 7 12 12 20.71 7"/><line x1="12" x2="12" y1="22" y2="12"/></svg>
-                          <span>Chọn nhiều SP</span>
+                          <span>Chọn SP</span>
                         </button>
                         <div id="bulkProductListBox" class="product-chips-list"></div>
                         <button class="btn btn-danger btn-sm" id="btnClearBulkProduct" type="button" style="display: none; padding: 0 6px">
@@ -274,7 +264,7 @@
               </div>
 
               <details class="compose-section compose-advanced">
-                <summary><svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>Nâng cao: thời lượng, độ phân giải, số luồng, tài khoản</summary>
+                <summary><svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:5px"><line x1="21" x2="14" y1="4" y2="4"/><line x1="10" x2="3" y1="4" y2="4"/><line x1="21" x2="12" y1="12" y2="12"/><line x1="8" x2="3" y1="12" y2="12"/><line x1="21" x2="16" y1="20" y2="20"/><line x1="12" x2="3" y1="20" y2="20"/><line x1="14" x2="14" y1="2" y2="6"/><line x1="8" x2="8" y1="10" y2="14"/><line x1="16" x2="16" y1="18" y2="22"/></svg>Thời lượng, độ phân giải, tài khoản</summary>
                 <div class="compose-grid">
                   <div><label class="field-label" for="bulkDurationSelect">Thời lượng video</label><select id="bulkDurationSelect" class="select">
                       <option value="5s">5 giây (Đơn)</option>
@@ -331,7 +321,7 @@
                   <input type="radio" name="queueView" id="queueViewTable" value="table" />
                   <label for="queueViewTable"><svg aria-hidden="true" class="lucide" width="12.5" height="12.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-2px;margin-right:4px"><path d="M12 3v18"/><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 9h18"/><path d="M3 15h18"/></svg>Bảng</label>
                 </div>
-                <button class="btn btn-brand btn-sm" id="btnQueueAddRow" type="button" title="Thêm nhanh 1 luồng prompt mới vào hàng đợi">
+                <button class="btn btn-soft btn-sm" id="btnQueueAddRow" type="button" title="Thêm nhanh 1 luồng prompt mới vào hàng đợi">
                   <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
                   <span>Thêm luồng</span>
                 </button>
@@ -341,7 +331,10 @@
                   <input type="checkbox" id="selectAllBatch" checked />
                   <span id="queueCount">0 luồng</span>
                 </label>
-                <div class="queue-bulk-pills">
+<div class="queue-bulk-actions">
+<details class="menu">
+<summary class="btn btn-sm"><span>Chọn</span><svg aria-hidden="true" class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+<div class="menu-list" role="group" aria-label="Chọn nhanh luồng">
                   <button class="btn btn-sm" id="btnSelectAllRows" type="button" title="Chọn toàn bộ luồng">
                     <svg aria-hidden="true" class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m3 17 2 2 4-4"/><path d="m3 7 2 2 4-4"/><path d="M13 6h8"/><path d="M13 12h8"/><path d="M13 18h8"/></svg>
                     <span>Tất cả</span>
@@ -362,11 +355,16 @@
                     <svg aria-hidden="true" class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/></svg>
                     <span>Lỗi</span>
                   </button>
+</div>
+</details>
                   <button class="btn btn-soft btn-sm" id="btnBulkApplyPrompt" type="button" title="Ghi đè Prompt & Cấu hình cột trái vào tất cả các luồng đang tích chọn">
                     <svg aria-hidden="true" class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                     <span>Sửa hàng loạt</span>
                   </button>
-                  <button class="btn btn-brand btn-sm" id="btnSyncOldJobs" type="button" title="Đồng bộ tự động toàn bộ Job, Lịch sử, Ních & Media từ tool bản cũ sang bản mới">
+<details class="menu">
+<summary class="btn btn-sm"><span>Nhập / Xuất Job</span><svg aria-hidden="true" class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+<div class="menu-list" role="group" aria-label="Nhập và xuất Job">
+                  <button class="btn btn-sm" id="btnSyncOldJobs" type="button" title="Đồng bộ tự động toàn bộ Job, Lịch sử, Ních & Media từ tool bản cũ sang bản mới">
                     <svg aria-hidden="true" class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
                     <span>Đồng bộ bản cũ</span>
                   </button>
@@ -378,7 +376,9 @@
                     <svg aria-hidden="true" class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                     <span>Xuất Job</span>
                   </button>
-                </div>
+</div>
+</details>
+</div>
               </div>
               <div class="queue-list" id="batchTableBody" role="list"></div>
               <div class="queue-footer">
@@ -392,7 +392,7 @@
                 </button>
                 <button class="btn btn-soft btn-sm" id="btnRunPendingBatch" type="button" title="Chạy ngay các luồng đang chờ chạy (kể cả khi đang có luồng khác đang chạy)">
                   <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="6 3 20 12 6 21 6 3"/></svg>
-                  <span id="btnRunPendingLabel">Chạy chờ chạy</span>
+                  <span id="btnRunPendingLabel">Chạy luồng chờ</span>
                 </button>
                 <button class="btn btn-warn btn-sm" id="btnStopSelectedBatch" type="button" title="Dừng các luồng đang chạy đã tích chọn">
                   <svg aria-hidden="true" class="lucide" width="12.5" height="12.5" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
@@ -402,6 +402,9 @@
                   <svg aria-hidden="true" class="lucide" width="12.5" height="12.5" viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="6" y="6" width="12" height="12" rx="1"/></svg>
                   <span>Dừng tất cả</span>
                 </button>
+<details class="menu menu-up">
+<summary class="btn btn-sm" title="Chạy lại lỗi, xuất media, dọn và xóa luồng"><span>Khác</span><svg aria-hidden="true" class="lucide" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg></summary>
+<div class="menu-list" role="group" aria-label="Thao tác khác với hàng đợi">
                 <button class="btn btn-sm" id="btnRetryErrored" type="button">
                   <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                   <span>Chạy lại lỗi</span>
@@ -410,14 +413,16 @@
                   <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                   <span>Xuất media</span>
                 </button>
+                <button class="btn btn-sm" id="btnClearDoneBatch" type="button" title="Dọn các luồng đã hoàn thành khỏi hàng đợi cho nhẹ (video vẫn nằm trong thư mục media)">
+                  <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 4 12 14.01l-3-3"/><path d="M3 6h11"/><path d="M3 12h7"/><path d="M3 18h7"/></svg>
+                  <span>Dọn luồng đã xong</span>
+                </button>
                 <button class="btn btn-danger btn-sm" id="btnDeleteSelectedBatch" type="button" title="Xoá các luồng đã chọn (tự động dừng nếu đang chạy)">
                   <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                   <span>Xoá đã chọn</span>
                 </button>
-                <button class="btn btn-soft btn-sm" id="btnClearDoneBatch" type="button" title="Dọn các luồng đã hoàn thành khỏi hàng đợi cho nhẹ (video vẫn được lưu trong Thư viện media)">
-                  <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 4 12 14.01l-3-3"/><path d="M3 6h11"/><path d="M3 12h7"/><path d="M3 18h7"/></svg>
-                  <span>Dọn luồng đã xong</span>
-                </button>
+</div>
+</details>
               </div>
             </section>
 
@@ -434,7 +439,7 @@
                 <span class="view-title-icon">
                   <svg aria-hidden="true" class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 </span>
-                <span>Quản lý Tài khoản Muse.ai (Multi-Profile CDP &amp; Keepalive 48h)</span>
+                <span>Tài khoản Muse.ai</span>
               </div>
               <div class="stat-pills">
                 <span class="stat-pill accent">LIVE: <strong id="accStatActive">0</strong></span>
@@ -449,7 +454,7 @@
                   id="loginProxyInput"
                   class="input"
                   style="width: 220px; height: 32px; font-size: 11.5px"
-                  placeholder="Proxy ních mới (host:port:user:pass)…"
+                  placeholder="Proxy cho ních mới (tùy chọn)…"
                   title="Tùy chọn: Gắn Proxy riêng cho Chrome khi mở đăng nhập ních mới"
                 />
                 <select id="multiLoginCountSelect" class="select select-compact" style="width: 122px; height: 32px">
@@ -458,18 +463,18 @@
                   <option value="3">3 ních cùng lúc</option>
                   <option value="4">4 ních cùng lúc</option>
                 </select>
-                <button class="btn btn-primary btn-sm" id="btnBrowserLoginCookie">
+                <button class="btn btn-primary btn-sm" id="btnBrowserLoginCookie" title="Mở Chrome để đăng nhập, cookie được lấy tự động">
                   <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
-                  <span>Mở Chrome đăng nhập (Tự lấy Cookie)</span>
+                  <span>Đăng nhập bằng Chrome</span>
                 </button>
               </div>
-              <button class="btn btn-soft btn-sm" id="btnRenewAllAccounts">
+              <button class="btn btn-soft btn-sm" id="btnRenewAllAccounts" title="Kiểm tra LIVE / DIE tất cả ních và gia hạn 48h">
                 <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
-                <span>Check LIVE / DIE tất cả (+48h)</span>
+                <span>Kiểm tra tất cả</span>
               </button>
-              <a class="btn btn-sm" href="/admin/extension.zip" download>
+              <a class="btn btn-sm" href="/admin/extension.zip" download title="Tải Chrome Extension (.zip)">
                 <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19.439 7.85c-.049.322.059.648.289.878l1.568 1.568c.47.47.706 1.087.706 1.704s-.235 1.233-.706 1.704l-1.611 1.611a.98.98 0 0 1-.837.276c-.47-.07-.802-.48-.968-.925a2.501 2.501 0 1 0-3.214 3.214c.446.166.855.497.925.968a.979.979 0 0 1-.276.837l-1.61 1.61a2.404 2.404 0 0 1-1.705.707 2.402 2.402 0 0 1-1.704-.706l-1.568-1.568a1.026 1.026 0 0 0-.877-.29c-.493.074-.84.504-1.02.968a2.5 2.5 0 1 1-3.237-3.237c.464-.18.894-.527.967-1.02a1.026 1.026 0 0 0-.289-.877l-1.568-1.568A2.402 2.402 0 0 1 1.998 12c0-.617.236-1.234.706-1.704L4.23 8.77c.24-.24.581-.353.917-.303.515.077.877.528 1.073 1.01a2.5 2.5 0 1 0 3.259-3.259c-.482-.196-.933-.558-1.01-1.073-.05-.336.062-.676.303-.917l1.525-1.525A2.402 2.402 0 0 1 12 1.998c.617 0 1.234.236 1.704.706l1.568 1.568c.23.23.556.338.877.29.493-.074.84-.504 1.02-.968a2.5 2.5 0 1 1 3.237 3.237c-.464.18-.894.527-.967 1.02Z"/></svg>
-                <span>Tải Chrome Extension (.zip)</span>
+                <span>Tải Extension</span>
               </a>
             </div>
           </div>
@@ -479,12 +484,12 @@
               <div class="card-title">
                 <span class="card-title-left">
                   <svg aria-hidden="true" class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
-                  <span>Nhập Cookie &amp; Proxy thủ công cho từng tài khoản</span>
+                  <span>Thêm tài khoản bằng Cookie</span>
                 </span>
               </div>
               <div style="display: grid; grid-template-columns: 1fr 1.25fr; gap: 8px; margin-bottom: 8px">
                 <div>
-                  <label class="field-label">Tên gợi nhớ tài khoản (Tùy chọn)</label>
+                  <label class="field-label">Tên gợi nhớ (tùy chọn)</label>
                   <input
                     type="text"
                     id="accNameInput"
@@ -493,7 +498,7 @@
                   />
                 </div>
                 <div>
-                  <label class="field-label">Proxy riêng cho ních này (HTTP / SOCKS5)</label>
+                  <label class="field-label">Proxy riêng (HTTP / SOCKS5)</label>
                   <input
                     type="text"
                     id="accProxyInput"
@@ -503,7 +508,7 @@
                 </div>
               </div>
               <label class="field-label">
-                Dữ liệu Cookie (Cần có <code>hatch_sess</code>, <code>hatch_vml</code>, <code>hatch_gw</code>)
+                Cookie (cần có <code>hatch_sess</code>, <code>hatch_vml</code>, <code>hatch_gw</code>)
               </label>
               <textarea
                 id="accCookieInput"
@@ -525,7 +530,7 @@
                 </div>
                 <button class="btn btn-primary" id="btnAddAccountManual">
                   <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-                  <span>Lưu &amp; Check LIVE/DIE ngay</span>
+                  <span>Lưu &amp; kiểm tra</span>
                 </button>
               </div>
             </div>
@@ -534,11 +539,11 @@
               <div class="card-title">
                 <span class="card-title-left">
                   <svg aria-hidden="true" class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20"/><path d="M2 12h20"/></svg>
-                  <span>Gán Proxy Hàng Loạt (Mỗi dòng 1 Proxy cho 1 Tài khoản)</span>
+                  <span>Gán Proxy hàng loạt</span>
                 </span>
               </div>
               <label class="field-label">
-                Hỗ trợ <code>ip:port:user:pass</code>, <code>http://user:pass@ip:port</code>, <code>socks5://user:pass@ip:port</code> (Áp dụng cho cả Gateway Noise-XX &amp; Chrome)
+                Mỗi dòng một proxy cho một tài khoản: <code>ip:port:user:pass</code>, <code>http://user:pass@ip:port</code> hoặc <code>socks5://user:pass@ip:port</code>
               </label>
               <textarea
                 id="bulkProxyInput"
@@ -547,7 +552,7 @@
                 placeholder="103.11.22.33:8080:user1:pass1&#10;socks5://user2:pass2@45.66.77.88:1080"
               ></textarea>
               <div style="display: flex; gap: 8px; margin-top: 10px; align-items: center; justify-content: space-between">
-                <span style="font-size: 12px; color: var(--muted-foreground)">Mỗi ních chạy độc lập trên IP Proxy riêng khi tạo Video/Ảnh &amp; Mở Chrome.</span>
+                <span style="font-size: 12px; color: var(--muted-foreground)">Mỗi ních dùng IP riêng khi tạo video, ảnh và mở Chrome.</span>
                 <button class="btn btn-soft" id="btnBulkAssignProxy" type="button">
                   <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>
                   <span>Gán Proxy hàng loạt</span>
@@ -558,18 +563,16 @@
 
           <div class="table-card">
             <div class="table-scroll">
-              <table class="data-table">
+              <table class="data-table accounts-table">
                 <thead>
                   <tr>
-                    <th>ID / Cổng CDP</th>
-                    <th>Tên tài khoản / Email</th>
-                    <th>Proxy riêng (HTTP / SOCKS5)</th>
+                    <th>Tài khoản</th>
+                    <th>Proxy</th>
                     <th>Trạng thái</th>
-                    <th>Số Cookie</th>
-                    <th>Hạn Cookie (hatch_vml)</th>
-                    <th>Quota đã dùng</th>
-                    <th>Lượt dùng / Lỗi</th>
-                    <th>Bảo hoạt gần nhất</th>
+                    <th>Hạn Cookie</th>
+                    <th>Quota</th>
+                    <th>Sử dụng</th>
+                    <th>Bảo hoạt</th>
                     <th>Thao tác</th>
                   </tr>
                 </thead>
@@ -587,7 +590,7 @@
                 <span class="view-title-icon">
                   <svg aria-hidden="true" class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
                 </span>
-                <span>Trợ lý Chat Muse-Spark &amp; Xưởng Kịch bản AI</span>
+                <span>Chat &amp; Kịch bản AI</span>
               </div>
             </div>
             <div class="topbar-actions">
@@ -607,17 +610,14 @@
           <div class="chat-layout">
             <div class="chat-box">
               <div class="chat-messages" id="chatMessagesBox">
-                <div class="chat-msg assistant">
-                  Xin chào! Tôi là <strong>Muse-Spark AI</strong> trên nền tảng <strong>Muse AI Studio (Node.js + shadcn/ui)</strong>.
-                  Bạn có thể trò chuyện trực tiếp, viết code, tạo ảnh/video nhanh hoặc sử dụng bảng <strong>Tạo kịch bản bằng AI</strong> bên phải để sinh bộ Prompt hàng loạt!
-                </div>
+                <div class="chat-msg assistant">Xin chào! Tôi là <strong>Muse-Spark AI</strong>. Bạn có thể trò chuyện, viết code, tạo ảnh hoặc video ngay tại đây, hoặc dùng bảng <strong>Tạo kịch bản bằng AI</strong> bên phải để sinh prompt hàng loạt.</div>
               </div>
               <div class="chat-input-bar">
                 <input
                   type="text"
                   id="chatPromptInput"
                   class="input"
-                  placeholder="Nhập câu hỏi hoặc yêu cầu cho Muse-Spark AI (Nhấn Enter để gửi)…"
+                  placeholder="Nhập câu hỏi cho Muse-Spark, nhấn Enter để gửi…"
                 />
                 <button class="btn btn-primary" id="btnSendChat">
                   <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
@@ -630,7 +630,7 @@
               <div class="card-title">
                 <span class="card-title-left">
                   <svg aria-hidden="true" class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-                  <span>Tạo kịch bản bằng AI (Google Gemini Multimodal / Muse-Spark)</span>
+                  <span>Tạo kịch bản bằng AI</span>
                 </span>
               </div>
 
@@ -652,7 +652,7 @@
                 </div>
               </div>
 
-              <div id="geminiKeyConfigBox" style="background: var(--bg-soft); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 8px 10px">
+              <div id="geminiKeyConfigBox">
                 <label class="field-label">Google Gemini API Key (Tự động lưu)</label>
                 <div style="display: flex; gap: 6px">
                   <input
@@ -753,7 +753,7 @@
 
               <button class="btn btn-primary" id="btnGenerateScriptPrompts">
                 <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/></svg>
-                <span>Tạo kịch bản bằng AI (Gemini / Muse-Spark)</span>
+                <span>Tạo kịch bản</span>
               </button>
 
               <label class="field-label" style="margin-top: 2px">
@@ -779,60 +779,6 @@
           </div>
         </section>
 
-        <!-- VIEW 4: MEDIA GALLERY -->
-        <section class="view-panel" id="view-media">
-          <div class="topbar">
-            <div class="topbar-left">
-              <div class="view-title">
-                <span class="view-title-icon">
-                  <svg aria-hidden="true" class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-                </span>
-                <span>Thư viện Video &amp; Ảnh đã sản xuất</span>
-              </div>
-              <div class="stat-pills">
-                <span class="stat-pill accent">Tổng file: <strong id="mediaStatTotal">0</strong></span>
-                <span class="stat-pill">Dung lượng: <strong id="mediaStatSize">0</strong></span>
-              </div>
-            </div>
-            <div class="topbar-actions">
-              <select id="mediaFilterSelect" class="select select-compact" style="width: 150px">
-                <option value="all">Tất cả Media</option>
-                <option value="video">Chỉ Video</option>
-                <option value="image">Chỉ Ảnh</option>
-              </select>
-              <button class="btn btn-sm" id="btnRefreshMedia">
-                <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 16h5v5"/></svg>
-                <span>Làm mới</span>
-              </button>
-              <button class="btn btn-soft btn-sm" id="btnOpenMediaFolderGallery">
-                <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 14 1.5-2.9A2 2 0 0 1 9.24 10H20a2 2 0 0 1 1.94 2.5l-1.54 6a2 2 0 0 1-1.95 1.5H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h3.9a2 2 0 0 1 1.69.9l.81 1.2a2 2 0 0 0 1.67.9H18a2 2 0 0 1 2 2v2"/></svg>
-                <span>Mở thư mục chứa file</span>
-              </button>
-            </div>
-          </div>
-
-          <div class="media-toolbar" style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:12px">
-            <input type="text" id="mediaSearchInput" class="input" placeholder="Tìm theo tên file…" style="flex:1; min-width:180px; height:30px; font-size:12px" />
-            <select id="mediaSortSelect" class="select select-compact" style="width:150px">
-              <option value="newest">Mới nhất</option>
-              <option value="oldest">Cũ nhất</option>
-              <option value="name">Tên A→Z</option>
-              <option value="size">Dung lượng</option>
-            </select>
-            <label class="btn btn-sm" style="gap:6px; cursor:pointer"><input type="checkbox" id="mediaSelectAll" style="margin:0" />Chọn tất cả</label>
-            <button class="btn btn-soft btn-sm" id="btnMediaExportSelected">
-              <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
-              <span>Xuất đã chọn (<span id="mediaSelCount">0</span>)</span>
-            </button>
-            <button class="btn btn-danger btn-sm" id="btnMediaDeleteSelected">
-              <svg aria-hidden="true" class="lucide" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-              <span>Xóa đã chọn</span>
-            </button>
-          </div>
-
-          <div class="media-grid" id="mediaGalleryGrid"></div>
-        </section>
-
         <!-- VIEW 5: TASKS & LOGS -->
         <section class="view-panel" id="view-tasks">
           <div class="topbar">
@@ -841,7 +787,7 @@
                 <span class="view-title-icon">
                   <svg aria-hidden="true" class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="4 17 10 11 4 5"/><line x1="12" x2="20" y1="19" y2="19"/></svg>
                 </span>
-                <span>Nhật ký Tiến trình &amp; Hoạt động CDP</span>
+                <span>Nhật ký &amp; Tiến trình</span>
               </div>
             </div>
             <div class="topbar-actions">
@@ -851,15 +797,15 @@
               </button>
               <button class="btn btn-danger btn-sm" id="btnClearTasks">
                 <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
-                <span>Xóa lịch sử tiến trình</span>
+                <span>Xóa lịch sử</span>
               </button>
             </div>
           </div>
 
           <div class="grid-2" style="flex: 1; min-height: 0">
             <div class="table-card">
-              <div style="padding: 10px 12px; font-weight: 600; border-bottom: 1px solid var(--border)">
-                Lịch sử Tiến trình API &amp; Batch
+              <div class="table-card-head">
+                Lịch sử tiến trình
               </div>
               <div class="table-scroll">
                 <table class="data-table">
@@ -878,8 +824,8 @@
             </div>
 
             <div class="table-card">
-              <div style="padding: 10px 12px; font-weight: 600; border-bottom: 1px solid var(--border)">
-                Nhật ký Engine CDP trực tiếp
+              <div class="table-card-head">
+                Nhật ký Engine
               </div>
               <div class="table-scroll" style="padding: 12px">
                 <pre class="code-block" id="engineLogsBox" style="height: 100%; margin: 0">Đang tải nhật ký…</pre>
@@ -896,28 +842,29 @@
                 <span class="view-title-icon">
                   <svg aria-hidden="true" class="lucide" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
                 </span>
-                <span>Cổng chuẩn OpenAI API (/v1) &amp; Cấu hình Hệ thống</span>
+                <span>Cổng API &amp; Cài đặt</span>
               </div>
             </div>
             <div class="topbar-actions">
               <button class="btn btn-primary btn-sm" id="btnSaveSettings">
                 <svg aria-hidden="true" class="lucide" width="13.5" height="13.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z"/><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7"/><path d="M7 3v4a1 1 0 0 0 1 1h7"/></svg>
-                <span>Lưu cấu hình hệ thống</span>
+                <span>Lưu cấu hình</span>
               </button>
             </div>
           </div>
 
           <div class="grid-2">
+            <div class="settings-col">
             <div class="card">
               <div class="card-title">
                 <span class="card-title-left">
                   <svg aria-hidden="true" class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></svg>
-                  <span>Thông tin kết nối OpenAI-Compatible API</span>
+                  <span>Kết nối API (chuẩn OpenAI)</span>
                 </span>
               </div>
               <div style="display: flex; flex-direction: column; gap: 10px">
                 <div>
-                  <label class="field-label">OpenAI Base URL (Dùng cho Cursor, NextChat, OpenWebUI, n8n, SDK…)</label>
+                  <label class="field-label">Base URL (dùng cho Cursor, NextChat, OpenWebUI, n8n, SDK…)</label>
                   <div style="display: flex; gap: 8px">
                     <input type="text" id="apiBaseUrlInput" class="input mono" readonly />
                     <button class="btn btn-soft" id="btnCopyBaseUrl">
@@ -957,17 +904,50 @@
                 </div>
               </div>
             </div>
+            <div class="card settings-form settings-grow">
+              <div class="card-title">
+                <span class="card-title-left">
+                  <svg aria-hidden="true" class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/></svg>
+                  <span>Mẫu tên file &amp; prompt</span>
+                </span>
+              </div>
+              <div class="form-row">
+                <div style="grid-column: 1 / -1">
+                  <label class="field-label">Mẫu tên file xuất (đổi tên video/ảnh khi lưu — để trống = tên tự động)</label>
+                  <input type="text" id="setOutputNameTemplate" class="input mono" placeholder="VD: {title}_{date} hoặc {mode}_{datetime}_{ratio}" />
+                  <div class="field-hint">
+                    Biến: <code>{title}</code> <code>{prompt}</code> <code>{duration}</code> <code>{ratio}</code> <code>{quality}</code> <code>{mode}</code> <code>{tag}</code> <code>{date}</code> <code>{time}</code> <code>{datetime}</code> <code>{rand}</code>. Trùng tên tự thêm "(2)". Tên bạn đặt riêng cho từng luồng vẫn được ưu tiên.
+                  </div>
+                </div>
+              </div>
+              <div class="form-row">
+                <div style="grid-column: 1 / -1">
+                  <label class="field-label">Mẫu prompt Video (để trống = dùng mẫu mặc định)</label>
+                  <textarea id="setPromptTemplateVideo" class="textarea mono" rows="3" placeholder="VD: Please generate and present a {duration}s MP4 video ({specs}) saved to /workspace/imagine_media/{output}: {prompt}"></textarea>
+                </div>
+              </div>
+              <div class="form-row">
+                <div style="grid-column: 1 / -1">
+                  <label class="field-label">Mẫu prompt Ảnh (để trống = dùng mẫu mặc định)</label>
+                  <textarea id="setPromptTemplateImage" class="textarea mono" rows="2" placeholder="VD: Please generate and present an image ({specs}): {prompt}"></textarea>
+                  <div class="field-hint">
+                    Biến thay thế: <code>{prompt}</code> <code>{duration}</code> <code>{ratio}</code> <code>{quality}</code> <code>{output}</code> <code>{clips}</code> <code>{specs}</code>. Chính sách thực thi video &amp; trích tên sản phẩm vẫn tự động được thêm vào cuối.
+                  </div>
+                </div>
+              </div>
+            </div>
+            </div>
 
-            <div class="card">
+            <div class="card settings-form">
               <div class="card-title">
                 <span class="card-title-left">
                   <svg aria-hidden="true" class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.2a.5.5 0 0 1 .86.46l-1.92 6.02A1 1 0 0 0 13 10h7a1 1 0 0 1 .78 1.63l-9.9 10.2a.5.5 0 0 1-.86-.46l1.92-6.02A1 1 0 0 0 11 14z"/></svg>
-                  <span>Tinh chỉnh Hiệu năng, Gemini API &amp; Bảo hoạt</span>
+                  <span>Hiệu năng &amp; Bảo hoạt</span>
                 </span>
               </div>
               <div class="form-row">
                 <div>
-                  <label class="field-label">Số luồng CDP tối đa</label>
+                  <label class="field-label">Số luồng tối đa</label>
                   <input type="number" id="setMaxConcurrency" class="input" min="1" max="50" value="3" />
                 </div>
                 <div>
@@ -985,7 +965,7 @@
                   <input type="number" id="setVideoTimeout" class="input" min="60" max="1800" value="600" />
                 </div>
               </div>
-              <div class="form-row" style="margin-bottom: 0">
+              <div class="form-row">
                 <div>
                   <label class="field-label">Tự động thử lại khi lỗi (số lần, 0 = tắt)</label>
                   <input type="number" id="setAutoRetryCount" class="input" min="0" max="5" value="2" />
@@ -997,43 +977,19 @@
                   </label>
                 </div>
               </div>
-              <div class="form-row" style="margin-bottom: 0">
+              <div class="form-row">
                 <div style="grid-column: 1 / -1">
                   <label class="field-label">Google Gemini API Key (Dùng tạo kịch bản AI)</label>
                   <input type="password" id="setGeminiApiKey" class="input" placeholder="AIzaSy…" />
                 </div>
               </div>
-              <div class="form-row" style="margin-bottom: 0">
+              <div class="form-row">
                 <div style="grid-column: 1 / -1">
                   <label class="field-label">Thư mục xuất mặc định (nhớ lại, khỏi chọn mỗi lần)</label>
                   <div style="display: flex; gap: 6px; align-items: center">
                     <input type="text" id="setExportDir" class="input" readonly placeholder="Chưa đặt — sẽ hỏi mỗi lần xuất" style="flex: 1" />
                     <button class="btn btn-soft btn-sm" id="btnChooseExportDir" type="button">Chọn…</button>
                     <button class="btn btn-sm" id="btnClearExportDir" type="button" title="Xóa thư mục mặc định">Xóa</button>
-                  </div>
-                </div>
-              </div>
-              <div class="form-row" style="margin-bottom: 0">
-                <div style="grid-column: 1 / -1">
-                  <label class="field-label">Mẫu tên file xuất (đổi tên video/ảnh khi lưu — để trống = tên tự động)</label>
-                  <input type="text" id="setOutputNameTemplate" class="input" placeholder="VD: {title}_{date} hoặc {mode}_{datetime}_{ratio}" style="font-family: var(--font-mono, monospace); font-size: 12px" />
-                  <div style="font-size: 12px; color: var(--muted-foreground); margin-top: 4px">
-                    Biến: <code>{title}</code> <code>{prompt}</code> <code>{duration}</code> <code>{ratio}</code> <code>{quality}</code> <code>{mode}</code> <code>{tag}</code> <code>{date}</code> <code>{time}</code> <code>{datetime}</code> <code>{rand}</code>. Trùng tên tự thêm "(2)". Tên bạn đặt riêng cho từng luồng vẫn được ưu tiên.
-                  </div>
-                </div>
-              </div>
-              <div class="form-row" style="margin-bottom: 0">
-                <div style="grid-column: 1 / -1">
-                  <label class="field-label">Mẫu prompt Video (để trống = dùng mẫu mặc định)</label>
-                  <textarea id="setPromptTemplateVideo" class="input" rows="3" placeholder="VD: Please generate and present a {duration}s MP4 video ({specs}) saved to /workspace/imagine_media/{output}: {prompt}" style="font-family: var(--font-mono, monospace); font-size: 12px"></textarea>
-                </div>
-              </div>
-              <div class="form-row" style="margin-bottom: 0">
-                <div style="grid-column: 1 / -1">
-                  <label class="field-label">Mẫu prompt Ảnh (để trống = dùng mẫu mặc định)</label>
-                  <textarea id="setPromptTemplateImage" class="input" rows="2" placeholder="VD: Please generate and present an image ({specs}): {prompt}" style="font-family: var(--font-mono, monospace); font-size: 12px"></textarea>
-                  <div style="font-size: 12px; color: var(--muted-foreground); margin-top: 4px">
-                    Biến thay thế: <code>{prompt}</code> <code>{duration}</code> <code>{ratio}</code> <code>{quality}</code> <code>{output}</code> <code>{clips}</code> <code>{specs}</code>. Chính sách thực thi video &amp; trích tên sản phẩm vẫn tự động được thêm vào cuối.
                   </div>
                 </div>
               </div>
@@ -1044,7 +1000,7 @@
             <div class="card-title">
               <span class="card-title-left">
                 <svg aria-hidden="true" class="lucide" width="14.5" height="14.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="16 18 22 12 16 6"/><polyline points="8 6 2 12 8 18"/></svg>
-                <span>Ví dụ gọi API chuẩn OpenAI (Chat, Tạo Ảnh, Tạo Video)</span>
+                <span>Ví dụ gọi API</span>
               </span>
             </div>
             <pre class="code-block" id="apiCodeExamplesBox"></pre>

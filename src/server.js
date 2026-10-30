@@ -439,6 +439,7 @@ class MuseServer {
         }));
       return this._sendJson(res, 200, {
         ok: true,
+        version: APP_VERSION,
         base_url: this.baseUrl,
         api_key: this.store.settings.apiKey,
         engine_mode: "http_noise_gateway",
@@ -741,47 +742,13 @@ class MuseServer {
       return this._sendJson(res, 200, { ok: true });
     }
 
-    if (pathname === "/admin/media" && req.method === "GET") {
-      const files = [];
-      try {
-        const names = fs.readdirSync(this.store.mediaDir);
-        for (const name of names) {
-          const ext = path.extname(name).toLowerCase();
-          if (![".png", ".jpg", ".jpeg", ".webp", ".mp4", ".webm"].includes(ext)) continue;
-          const st = fs.statSync(path.join(this.store.mediaDir, name));
-          files.push({
-            name,
-            url: `/v1/media/${encodeURIComponent(name)}`,
-            type: [".mp4", ".webm"].includes(ext) ? "video" : "image",
-            size: st.size,
-            created_at: Math.floor(st.mtimeMs / 1000),
-          });
-        }
-        files.sort((a, b) => b.created_at - a.created_at);
-      } catch (_err) {
-        // ignore
-      }
-      return this._sendJson(res, 200, { media: files });
-    }
-
-    const mediaDeleteMatch = pathname.match(/^\/admin\/media\/([^/]+)$/);
-    if (mediaDeleteMatch && req.method === "DELETE") {
-      const name = path.basename(decodeURIComponent(mediaDeleteMatch[1]));
-      const p = path.join(this.store.mediaDir, name);
-      if (fs.existsSync(p)) {
-        fs.unlinkSync(p);
-        return this._sendJson(res, 200, { ok: true });
-      }
-      return this._sendJson(res, 404, { ok: false, error: "File not found" });
-    }
-
     if (pathname === "/admin/batch-rows" && req.method === "GET") {
       return this._sendJson(res, 200, { rows: this.store.getBatchRows() });
     }
 
     if (pathname === "/admin/batch-rows" && req.method === "POST") {
       const body = await this._readJson(req);
-      const saved = this.store.saveBatchRows(body.rows || []);
+      const saved = this.store.saveBatchRows(body.rows || [], { keepImages: body.keepImages === true });
       return this._sendJson(res, 200, { ok: true, count: saved.length });
     }
 

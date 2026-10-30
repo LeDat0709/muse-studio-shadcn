@@ -100,6 +100,9 @@
   --row-selected: rgba(59, 130, 246, 0.08);
   --scrim: rgba(5, 7, 11, 0.78);
   --media-ground: #030409;
+  --placeholder: #8b93a1;
+  --warn-ink: #fbbf24;
+  --success-ink: #34d399;
 }
 
 [data-theme="light"] {
@@ -159,6 +162,10 @@
   --shadow-lg: 0 10px 25px -3px rgba(0, 0, 0, 0.1);
 
   --sidebar-bg: #fafafa;
+  --placeholder: #6b6b74;
+  --warn-ink: #b45309;
+  --media-ground: #e4e4e7;
+  --success-ink: #047857;
 }
 
 * {
@@ -179,6 +186,29 @@ body {
   -moz-osx-font-smoothing: grayscale;
   overflow: clip;
   user-select: none;
+}
+
+::selection {
+  background: var(--brand);
+  color: var(--brand-foreground);
+}
+
+.input,
+.textarea {
+  caret-color: var(--focus);
+}
+
+/* The shell is unselectable like a native app; content people copy from is not. */
+.code-block,
+.chat-msg,
+.preview-error,
+code {
+  user-select: text;
+}
+
+code {
+  font-family: var(--font-mono);
+  font-size: 0.92em;
 }
 
 /* Custom Scrollbars */
@@ -238,12 +268,7 @@ svg.lucide,
   display: flex;
   align-items: center;
   gap: 10px;
-  padding: 8px 10px;
-  border-radius: var(--radius-md);
-  border: 1px solid var(--border);
-  background: var(--card);
-  box-shadow: var(--shadow-xs);
-  transition: border-color 0.15s ease;
+  padding: 4px 6px 8px;
 }
 
 .brand-logo-box {
@@ -282,13 +307,9 @@ svg.lucide,
 
 .brand-badge {
   font-size: 11px;
-  font-weight: 600;
-  padding: 1px 5px;
-  border-radius: 4px;
-  background: var(--brand-soft);
-  color: var(--accent-strong);
-  border: 1px solid var(--brand-border);
-  line-height: 1.3;
+  font-weight: 500;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
 }
 
 .brand-subtitle {
@@ -342,8 +363,6 @@ svg.lucide,
   background: var(--secondary);
   color: var(--foreground);
   font-weight: 600;
-  border-color: var(--border);
-  box-shadow: var(--shadow-xs);
 }
 
 .nav-item-left {
@@ -396,7 +415,6 @@ svg.lucide,
   display: flex;
   flex-direction: column;
   gap: 7px;
-  box-shadow: var(--shadow-xs);
 }
 
 .sidebar-card-title {
@@ -435,6 +453,11 @@ svg.lucide,
   background: var(--success);
   box-shadow: 0 0 0 3px var(--success-soft);
   margin-right: 5px;
+}
+
+.status-dot.is-off {
+  background: var(--danger);
+  box-shadow: 0 0 0 3px var(--danger-soft);
 }
 
 .endpoint-box {
@@ -585,7 +608,7 @@ svg.lucide,
 }
 
 .view-title {
-  font-size: 14.5px;
+  font-size: 15px;
   font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--foreground);
@@ -595,31 +618,21 @@ svg.lucide,
 }
 
 .view-title-icon {
-  width: 28px;
-  height: 28px;
-  border-radius: var(--radius-sm);
-  background: var(--secondary);
-  border: 1px solid var(--border);
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  color: var(--foreground);
+  color: var(--muted-foreground);
 }
 
 .stat-pills {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 14px;
   flex-wrap: wrap;
+  margin-left: 6px;
 }
 
 .stat-pill {
-  font-size: 11.5px;
-  font-weight: 500;
-  padding: 2px 8px;
-  border-radius: var(--radius-sm);
-  background: var(--card);
-  border: 1px solid var(--border);
+  font-size: 12px;
   color: var(--muted-foreground);
   display: inline-flex;
   align-items: center;
@@ -630,12 +643,6 @@ svg.lucide,
 .stat-pill strong {
   color: var(--foreground);
   font-weight: 600;
-}
-
-.stat-pill.accent {
-  background: var(--brand-soft);
-  border-color: var(--brand-border);
-  color: var(--accent-strong);
 }
 
 .stat-pill.accent strong {
@@ -728,9 +735,7 @@ svg.lucide,
 
 /* Destructive / Danger Button */
 .btn-danger {
-  background: var(--danger-soft);
-  color: var(--danger);
-  border-color: var(--danger-border);
+  color: var(--danger-ink-soft);
 }
 
 .btn-danger:hover:not(:disabled) {
@@ -741,8 +746,11 @@ svg.lucide,
 
 /* Warning Button */
 .btn-warn {
+  color: var(--warn-ink);
+}
+
+.btn-warn:hover:not(:disabled) {
   background: var(--warn-soft);
-  color: var(--warn);
   border-color: var(--warn-border);
 }
 
@@ -753,8 +761,9 @@ svg.lucide,
   border-radius: var(--radius-sm);
 }
 
-.btn-icon-only {
-  width: 28px;
+.btn-icon {
+  width: 30px;
+  height: 30px;
   padding: 0;
 }
 
@@ -788,8 +797,7 @@ svg.lucide,
 
 .input::placeholder,
 .textarea::placeholder {
-  /* impeccable: muted but ≥4.5:1 on dark bg (browser default dimmed --foreground to ~#757575 = 4.4:1) */
-  color: #8b93a1;
+  color: var(--placeholder);
   opacity: 1;
 }
 
@@ -809,9 +817,8 @@ svg.lucide,
 }
 
 .select-compact {
-  height: 28px;
   padding: 2px 24px 2px 8px;
-  font-size: 11.5px;
+  font-size: 12px;
 }
 
 .input:focus-visible,
@@ -1109,6 +1116,7 @@ input[type="checkbox"] {
 }
 
 .shadcn-empty-desc {
+  text-wrap: balance;
   font-size: 12px;
   color: var(--muted-foreground);
   max-width: 480px;
@@ -1224,19 +1232,19 @@ input[type="checkbox"] {
 
 .badge-ok {
   background: var(--success-soft);
-  color: var(--success);
+  color: var(--success-ink);
   border-color: var(--success-border);
 }
 
 .badge-warn {
   background: var(--warn-soft);
-  color: var(--warn);
+  color: var(--warn-ink);
   border-color: var(--warn-border);
 }
 
 .badge-fail {
   background: var(--danger-soft);
-  color: var(--danger);
+  color: var(--danger-ink-soft);
   border-color: var(--danger-border);
 }
 
@@ -1244,7 +1252,8 @@ input[type="checkbox"] {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-width: 130px;
+  width: fit-content;
+  max-width: 170px;
 }
 
 .mini-progress-track {
@@ -1332,55 +1341,6 @@ input[type="checkbox"] {
   display: flex;
   gap: 8px;
   background: var(--bg-soft);
-}
-
-/* Media Gallery */
-.media-grid {
-  flex: 1;
-  overflow-y: auto;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
-  gap: 12px;
-  align-content: start;
-}
-
-.media-item {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-md);
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  transition: border-color 0.15s ease, transform 0.15s ease;
-  box-shadow: var(--shadow-xs);
-}
-
-.media-item:hover {
-  border-color: var(--line-strong);
-  transform: translateY(-1px);
-}
-
-.media-preview {
-  width: 100%;
-  height: 145px;
-  object-fit: cover;
-  background: var(--media-ground);
-}
-
-.media-meta {
-  padding: 10px;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.media-name {
-  font-size: 11.5px;
-  font-weight: 600;
-  color: var(--foreground);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .code-block {
@@ -1738,17 +1698,70 @@ input[type="checkbox"] {
   white-space: nowrap;
 }
 
-.queue-bulk-pills {
+.queue-bulk-actions {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   flex-wrap: wrap;
 }
 
-.queue-bulk-pills .btn-sm {
-  height: 28px;
-  padding: 0 8px;
-  font-size: 11px;
+/* Native <details> dropdown: a summary button and a floating list of the same buttons. */
+.menu {
+  position: relative;
+}
+
+.menu > summary {
+  list-style: none;
+  user-select: none;
+}
+
+.menu > summary::-webkit-details-marker {
+  display: none;
+}
+
+.menu[open] > summary {
+  background: var(--accent);
+  border-color: var(--line-strong);
+}
+
+.menu-list {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 30;
+  min-width: 190px;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px;
+  background: var(--card-elevated);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-lg);
+}
+
+.menu-up .menu-list {
+  top: auto;
+  bottom: calc(100% + 4px);
+}
+
+.menu-list .btn {
+  width: 100%;
+  justify-content: flex-start;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+  font-size: 12px;
+}
+
+.menu-list .btn:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: transparent;
+}
+
+.menu-list .btn-danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+  color: var(--danger-ink-soft);
 }
 
 .queue-list {
@@ -1782,6 +1795,32 @@ input[type="checkbox"] {
   height: 28px;
   padding: 0 7px;
   font-size: 11px;
+  background: transparent;
+  border-color: transparent;
+  box-shadow: none;
+}
+
+.queue-row-actions .btn-sm:hover:not(:disabled) {
+  background: var(--accent);
+  border-color: var(--border);
+}
+
+.queue-row-actions .btn-danger:hover:not(:disabled) {
+  background: var(--danger-soft);
+  color: var(--danger-ink-soft);
+  border-color: var(--danger-border);
+}
+
+/* The browser skips layout and paint for rows outside the scroll view; long queues stay smooth. */
+.queue-item,
+.queue-card {
+  content-visibility: auto;
+}
+.queue-item {
+  contain-intrinsic-size: auto 73px;
+}
+.queue-card {
+  contain-intrinsic-size: auto 260px;
 }
 
 .queue-item:hover {
@@ -1861,19 +1900,13 @@ input[type="checkbox"] {
   border-top: 1px solid var(--border);
 }
 
-.queue-concurrency {
-  padding-right: 4px;
-  border-right: 1px solid var(--border);
-}
-
 .queue-concurrency .input {
   width: 52px;
-  height: 28px;
   padding: 0 6px;
   font-size: 12px;
 }
 
-.queue-footer #btnDeleteSelectedBatch {
+.queue-footer > .menu {
   margin-left: auto;
 }
 
@@ -1895,6 +1928,7 @@ input[type="checkbox"] {
 }
 
 .preview-media-empty {
+  background: var(--surface-muted);
   aspect-ratio: 9 / 16;
   max-height: 32vh;
   display: grid;
@@ -2026,7 +2060,7 @@ input[type="checkbox"] {
   }
 
   .queue-preview {
-    max-height: 42vh;
+    max-height: 34vh;
   }
 }
 
@@ -2118,6 +2152,121 @@ input[type="checkbox"] {
   max-width: 240px;
 }
 
+/* Accounts table: one row per ních, stacked details instead of ten wrapping columns. */
+.cell-sub {
+  margin-top: 2px;
+  font-size: 11px;
+  color: var(--muted-foreground);
+  white-space: nowrap;
+}
+
+.cell-sub strong {
+  color: var(--foreground);
+  font-weight: 500;
+}
+
+.cell-sub.is-danger {
+  color: var(--danger-ink-soft);
+}
+
+.cell-nums {
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  color: var(--muted-foreground);
+}
+
+.acc-proxy-row {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 250px;
+}
+
+.acc-proxy-row .input {
+  height: 28px;
+  min-width: 0;
+  flex: 1;
+  padding: 2px 8px;
+  font-size: 11px;
+}
+
+.acc-proxy-row .btn {
+  height: 28px;
+  padding: 0 8px;
+  flex-shrink: 0;
+}
+
+.icon-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* The actions stay reachable when the window is too narrow for the whole table. */
+.accounts-table th:last-child,
+.accounts-table td:last-child {
+  position: sticky;
+  right: 0;
+  background: var(--card);
+  box-shadow: -1px 0 0 var(--border);
+}
+
+.accounts-table th:last-child {
+  background: var(--surface-muted);
+}
+
+.table-card-head {
+  padding: 10px 12px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--border);
+}
+
+#engineLogsBox {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+/* Settings: the view scrolls, fields keep one rhythm. */
+#view-api {
+  overflow-y: auto;
+}
+
+#view-api > * {
+  flex-shrink: 0;
+}
+
+.settings-col {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
+}
+
+.settings-grow {
+  flex: 1;
+}
+
+.settings-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.settings-form .card-title {
+  margin-bottom: 0;
+}
+
+.settings-form .form-row {
+  margin-bottom: 0;
+}
+
+.field-hint {
+  margin-top: 4px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -2133,14 +2282,8 @@ input[type="checkbox"] {
 }
 
 /* The DIE counter on the accounts screen (was an inline style). */
-.stat-pill.danger {
-  background: var(--danger-soft);
-  color: var(--danger);
-  border-color: var(--danger-border);
-}
-
 .stat-pill.danger strong {
-  color: var(--danger);
+  color: var(--danger-ink-soft);
 }
 
 /* One keyboard ring for every control, shown at once (fields draw theirs inset, above). */

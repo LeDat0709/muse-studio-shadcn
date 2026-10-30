@@ -90,13 +90,15 @@ async function createMainWindow() {
     minWidth: 1120,
     minHeight: 700,
     show: !isSmokeTest,
-    title: "Muse AI Studio — Node.js & shadcn/ui",
+    title: "Muse AI Studio",
     backgroundColor: "#09090b",
     autoHideMenuBar: true,
     webPreferences: {
       preload: path.join(__dirname, "preload.cjs"),
       contextIsolation: true,
       nodeIntegration: false,
+      // Prompts are not worth a spellchecker and its downloaded dictionaries.
+      spellcheck: false,
     },
   });
 

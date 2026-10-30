@@ -177,6 +177,8 @@ function getMissingEssentialCookies(cookies) {
   return ESSENTIAL_COOKIES.filter((name) => !present.has(name));
 }
 
+const ROW_IMAGE_FIELDS = ["characterImage", "productImage", "referenceImage"];
+
 class Store {
   constructor(dataDir, options = {}) {
     this.dataDir = dataDir;
@@ -191,6 +193,7 @@ class Store {
     this.tasksFile = path.join(dataDir, "tasks.json");
     this.settingsFile = path.join(dataDir, "settings.json");
     this.batchRowsFile = path.join(dataDir, "batch-rows.json");
+    this.batchImagesFile = path.join(dataDir, "batch-images.json");
 
     fs.mkdirSync(this.mediaDir, { recursive: true });
 
@@ -231,7 +234,7 @@ class Store {
     if (!this.settings.geminiModel) {
       this.settings.geminiModel = "gemini-2.5-flash";
     }
-    this.batchRows = this._loadJson(this.batchRowsFile, []);
+    this.batchRows = this._loadRowsFrom(dataDir);
 
     if (!this.settings.apiKey) {
       this.settings.apiKey = "sk-muse-" + crypto.randomBytes(12).toString("hex");
@@ -376,14 +379,15 @@ class Store {
     return fallback;
   }
 
-  _saveJson(filePath, data) {
+  _saveJson(filePath, data, indent = 2) {
+    const text = JSON.stringify(data, null, indent);
     try {
       const tmp = `${filePath}.tmp`;
-      fs.writeFileSync(tmp, JSON.stringify(data, null, 2), "utf-8");
+      fs.writeFileSync(tmp, text, "utf-8");
       fs.renameSync(tmp, filePath);
     } catch (_err) {
       try {
-        fs.writeFileSync(filePath, JSON.stringify(data, null, 2), "utf-8");
+        fs.writeFileSync(filePath, text, "utf-8");
       } catch (_err2) {
         // ignore
       }
@@ -457,16 +461,50 @@ class Store {
     return this.settings;
   }
 
-  saveBatchRows(rows) {
+  // keepImages: the caller sent rows without image bodies because none changed (every status tick).
+  // Reattach them from memory and skip the image file, so a tick costs a small write, not a huge one.
+  saveBatchRows(rows, { keepImages = false } = {}) {
     if (Array.isArray(rows)) {
-      this.batchRows = rows;
-      this.saveBatchRowsToDisk();
+      this.batchRows = keepImages ? this._withKnownImages(rows) : rows;
+      this.saveBatchRowsToDisk({ images: !keepImages });
     }
     return this.batchRows;
   }
 
-  saveBatchRowsToDisk() {
-    this._saveJson(this.batchRowsFile, this.batchRows);
+  _withKnownImages(rows) {
+    const known = new Map(this.batchRows.map((r) => [r.id, r]));
+    return rows.map((row) => {
+      const prev = known.get(row.id);
+      if (!prev) return row;
+      const images = Object.fromEntries(ROW_IMAGE_FIELDS.filter((f) => prev[f]).map((f) => [f, prev[f]]));
+      return { ...row, ...images };
+    });
+  }
+
+  // Images live in their own file: base64 is what makes this data large, and it rarely changes.
+  saveBatchRowsToDisk({ images = true } = {}) {
+    const lightRows = this.batchRows.map((row) => {
+      const light = { ...row };
+      for (const field of ROW_IMAGE_FIELDS) if (light[field]) delete light[field];
+      return light;
+    });
+    if (images) {
+      const byRow = {};
+      for (const row of this.batchRows) {
+        const present = ROW_IMAGE_FIELDS.filter((f) => row[f]);
+        if (present.length) byRow[row.id] = Object.fromEntries(present.map((f) => [f, row[f]]));
+      }
+      // Images first: a crash between the two writes must not leave rows pointing at nothing.
+      this._saveJson(this.batchImagesFile, byRow, 0);
+    }
+    this._saveJson(this.batchRowsFile, lightRows, 0);
+  }
+
+  // Rows of a data folder with their images; older versions keep images inline, which still loads as is.
+  _loadRowsFrom(dir) {
+    const rows = this._loadJson(path.join(dir, "batch-rows.json"), []);
+    const images = this._loadJson(path.join(dir, "batch-images.json"), {});
+    return Array.isArray(rows) ? rows.map((row) => ({ ...row, ...images[row && row.id] })) : [];
   }
 
   getBatchRows() {
@@ -758,10 +796,8 @@ class Store {
 
     for (const dir of dirs) {
       syncedSources.push(dir);
-      const rowsFile = path.join(dir, "batch-rows.json");
-      if (fs.existsSync(rowsFile)) {
-        const rows = this._loadJson(rowsFile, []);
-        const r = this.mergeBatchRows(rows);
+      if (fs.existsSync(path.join(dir, "batch-rows.json"))) {
+        const r = this.mergeBatchRows(this._loadRowsFrom(dir));
         addedRows += r.addedRows;
         updatedRows += r.updatedRows;
       }
@@ -824,10 +860,6 @@ class Store {
           // ignore media copy errors
         }
       }
-    }
-
-    if (copiedMedia > 0) {
-      this.invalidateMediaCount();
     }
 
     return {
@@ -1363,35 +1395,7 @@ class Store {
         failed: failTasks,
         running: runningTasks,
       },
-      media_count: this._mediaCount(),
     };
-  }
-
-  // The 2s status poll calls stats(); scanning the media dir synchronously on every
-  // poll stalls the main process (bad on Windows with many files). Cache for 30s.
-  // ponytail: 30s TTL cache; call invalidateMediaCount() after saving a new file for
-  // an instant bump if the badge lag ever matters.
-  _mediaCount() {
-    const TTL_MS = 30000;
-    const now = Date.now();
-    if (this._mediaCountCache && now - this._mediaCountCache.at < TTL_MS) {
-      return this._mediaCountCache.value;
-    }
-    let count = 0;
-    try {
-      count = fs.readdirSync(this.mediaDir).filter((f) => {
-        const ext = path.extname(f).toLowerCase();
-        return [".png", ".jpg", ".jpeg", ".webp", ".mp4", ".webm"].includes(ext);
-      }).length;
-    } catch (_err) {
-      // ignore
-    }
-    this._mediaCountCache = { at: now, value: count };
-    return count;
-  }
-
-  invalidateMediaCount() {
-    this._mediaCountCache = null;
   }
 }
 

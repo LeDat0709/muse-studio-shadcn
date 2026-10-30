@@ -9,7 +9,6 @@
     previewRowId: "",
     queueFilter: { q: "", status: "all" },
     queueView: ["grid", "table"].includes(localStorage.getItem("muse_queue_view")) ? localStorage.getItem("muse_queue_view") : "list",
-    media: [],
     tasks: [],
     logs: [],
     zoom: Number(localStorage.getItem("embong_zoom") || 100),
@@ -698,7 +697,6 @@
     $all(".view-panel").forEach((panel) => {
       panel.classList.toggle("active", panel.id === `view-${viewName}`);
     });
-    if (viewName === "media") loadMedia();
     if (viewName === "tasks") loadTasksAndLogs();
     if (viewName === "accounts") loadAccounts();
   }
@@ -714,6 +712,7 @@
     try {
       const data = await api("/admin/status");
       state.status = data;
+      if ($("#appVersionBadge") && data.version) $("#appVersionBadge").textContent = `v${data.version}`;
 
       const baseUrlV1 = `${data.base_url}/v1`;
       if ($("#sideBaseUrlText")) $("#sideBaseUrlText").textContent = baseUrlV1;
@@ -722,7 +721,7 @@
 
       const cdpEl = $("#sideCdpStatus");
       if (cdpEl) {
-        cdpEl.innerHTML = `<span class="status-dot"></span>HTTP + Noise-XX (No CDP)`;
+        cdpEl.innerHTML = `<span class="status-dot"></span>Đang chạy`;
       }
 
       if ($("#sideActiveAccounts")) {
@@ -735,9 +734,6 @@
         $("#navBadgeAccounts").textContent = String(
           data.stats.accounts.live ?? data.stats.accounts.active
         );
-      }
-      if ($("#navBadgeMedia")) {
-        $("#navBadgeMedia").textContent = String(data.stats.media_count || 0);
       }
       if ($("#navBadgeTasks")) {
         $("#navBadgeTasks").textContent = String(data.stats.tasks.total || 0);
@@ -856,6 +852,8 @@
 
       renderApiExamples(baseUrlV1, data.api_key);
     } catch (_err) {
+      const offEl = $("#sideCdpStatus");
+      if (offEl) offEl.innerHTML = `<span class="status-dot is-off"></span>Mất kết nối`;
       // ignore
     }
   }
@@ -961,9 +959,9 @@ curl ${baseUrlV1}/videos \\
     if (!state.accounts.length) {
       tbody.innerHTML = `
         <tr>
-          <td colspan="10" style="text-align:center; padding: 36px; color: var(--muted-foreground)">
+          <td colspan="8" style="text-align:center; padding: 36px; color: var(--muted-foreground)">
             Chưa có tài khoản Muse.ai nào. Hãy bấm nút
-            <strong style="color: var(--foreground)">Mở Chrome đăng nhập (Tự lấy Cookie)</strong>
+            <strong style="color: var(--foreground)">Đăng nhập bằng Chrome</strong>
             ở góc trên hoặc dán Cookie vào ô bên trên.
           </td>
         </tr>`;
@@ -972,7 +970,7 @@ curl ${baseUrlV1}/videos \\
 
     tbody.innerHTML = state.accounts
       .map((acc) => {
-        let statusBadge = `<span class="badge badge-warn">Chưa Check Live</span>`;
+        let statusBadge = `<span class="badge badge-warn">Chưa kiểm tra</span>`;
         if (acc.status === "live") {
           statusBadge = `<span class="badge badge-ok">${ICON.check}<span>LIVE</span></span>`;
         } else if (acc.status === "disabled") {
@@ -1004,40 +1002,39 @@ curl ${baseUrlV1}/videos \\
         return `
           <tr>
             <td>
-              <code>${escapeHtml(acc.id)}</code>
-              <div style="font-size:10.5px; color:var(--accent-strong); margin-top:2px" title="Profile Chrome độc lập của ních này (Cổng CDP :${portNum})">CDP :${portNum}</div>
-            </td>
-            <td>
               <strong>${escapeHtml(acc.name)}</strong>
-              ${acc.email ? `<div style="font-size:11px;color:var(--muted-foreground)">${escapeHtml(acc.email)}</div>` : ""}
+              ${acc.email ? `<div class="cell-sub">${escapeHtml(acc.email)}</div>` : ""}
+              <div class="cell-sub" title="Profile Chrome độc lập của ních này (Cổng CDP :${portNum})"><code>${escapeHtml(acc.id)}</code> · CDP :${portNum}</div>
             </td>
             <td>
-              <div style="display:flex; gap:4px; align-items:center; min-width:215px">
-                <input type="text" class="input mono acc-proxy-input" data-id="${escapeHtml(acc.id)}" value="${escapeHtml(acc.proxy || "")}" placeholder="Mạng gốc (ip:port:user:pass)" style="height:26px; font-size:11px; padding:2px 6px" />
-                <button class="btn btn-soft btn-sm" data-acc-action="save-proxy" data-id="${escapeHtml(acc.id)}" style="height:26px; padding:0 7px" title="Lưu Proxy riêng cho ních này">Lưu</button>
-                <button class="btn btn-sm" data-acc-action="test-proxy" data-id="${escapeHtml(acc.id)}" style="height:26px; padding:0 7px" title="Kiểm tra kết nối &amp; lấy IP thực của Proxy">Test IP</button>
+              <div class="acc-proxy-row">
+                <input type="text" class="input mono acc-proxy-input" data-id="${escapeHtml(acc.id)}" value="${escapeHtml(acc.proxy || "")}" placeholder="ip:port:user:pass" aria-label="Proxy của ${escapeHtml(acc.name)}" />
+                <button class="btn btn-sm" data-acc-action="save-proxy" data-id="${escapeHtml(acc.id)}" title="Lưu Proxy riêng cho ních này">Lưu</button>
+                <button class="btn btn-sm" data-acc-action="test-proxy" data-id="${escapeHtml(acc.id)}" title="Kiểm tra kết nối &amp; lấy IP thực của Proxy">Test IP</button>
               </div>
-              <div style="font-size:10.5px; margin-top:3px; color:${acc.proxy ? "var(--accent-strong)" : "var(--muted-foreground)"}">
-                ${acc.proxy ? (acc.proxy_ip ? `🟢 Proxy IP: <strong>${escapeHtml(acc.proxy_ip)}</strong>` : `🌐 Đang dùng Proxy riêng`) : `⚡ Mạng gốc (Direct)`}
+              <div class="cell-sub">
+                ${acc.proxy ? (acc.proxy_ip ? `Proxy IP: <strong>${escapeHtml(acc.proxy_ip)}</strong>` : `Đang dùng Proxy riêng`) : `Mạng gốc (không Proxy)`}
               </div>
             </td>
             <td>
               ${statusBadge}
               ${errLine}
             </td>
-            <td>${acc.cookie_count} cookies ${acc.has_session ? "đủ hatch_sess" : "Thiếu hatch_sess"}</td>
-            <td>${expHtml}</td>
-            <td><span class="badge badge-idle">${escapeHtml(quotaPct)}</span></td>
-            <td>${acc.use_count || 0} lượt / ${acc.fail_count || 0} lỗi</td>
-            <td>${formatTimeAgo(acc.last_keepalive)}</td>
             <td>
-              <div style="display:flex; gap:5px; flex-wrap:wrap">
-                <button class="btn btn-primary btn-sm" data-acc-action="open-chrome" data-id="${escapeHtml(acc.id)}" title="Mở cửa sổ Chrome riêng của ních này (Cổng :${portNum})">${ICON.globe}<span>Mở Chrome</span></button>
-                <button class="btn btn-soft btn-sm" data-acc-action="renew" data-id="${escapeHtml(acc.id)}" title="Mở Chrome kiểm tra LIVE / DIE và gia hạn 48h">${ICON.refresh}<span>Check Live</span></button>
-                <button class="btn btn-sm" data-acc-action="quota" data-id="${escapeHtml(acc.id)}" title="Kiểm tra Quota">${ICON.barChart}<span>Quota</span></button>
-                <button class="btn btn-sm" data-acc-action="export" data-id="${escapeHtml(acc.id)}" title="Sao chép cookie ních này (định dạng Cookie-Editor) vào clipboard">${ICON.download}<span>Cookie</span></button>
-                <button class="btn btn-sm" data-acc-action="toggle" data-id="${escapeHtml(acc.id)}">${acc.status === "disabled" ? ICON.play : ICON.pause}</button>
-                <button class="btn btn-danger btn-sm" data-acc-action="delete" data-id="${escapeHtml(acc.id)}">${ICON.trash}</button>
+              ${expHtml}
+              <div class="cell-sub${acc.has_session ? "" : " is-danger"}">${acc.cookie_count} cookie${acc.has_session ? "" : " · Thiếu hatch_sess"}</div>
+            </td>
+            <td><span class="badge badge-idle">${escapeHtml(quotaPct)}</span></td>
+            <td class="cell-nums">${acc.use_count || 0} lượt / ${acc.fail_count || 0} lỗi</td>
+            <td class="cell-nums">${formatTimeAgo(acc.last_keepalive)}</td>
+            <td>
+              <div class="icon-actions">
+                <button class="btn btn-sm btn-icon" data-acc-action="open-chrome" data-id="${escapeHtml(acc.id)}" title="Mở Chrome của ních này (Cổng :${portNum})" aria-label="Mở Chrome">${ICON.globe}</button>
+                <button class="btn btn-sm btn-icon" data-acc-action="renew" data-id="${escapeHtml(acc.id)}" title="Kiểm tra LIVE / DIE và gia hạn 48h" aria-label="Kiểm tra">${ICON.refresh}</button>
+                <button class="btn btn-sm btn-icon" data-acc-action="quota" data-id="${escapeHtml(acc.id)}" title="Kiểm tra Quota" aria-label="Kiểm tra Quota">${ICON.barChart}</button>
+                <button class="btn btn-sm btn-icon" data-acc-action="export" data-id="${escapeHtml(acc.id)}" title="Sao chép cookie ních này (định dạng Cookie-Editor)" aria-label="Sao chép cookie">${ICON.download}</button>
+                <button class="btn btn-sm btn-icon" data-acc-action="toggle" data-id="${escapeHtml(acc.id)}" title="${acc.status === "disabled" ? "Bật lại ních" : "Tạm dừng ních"}" aria-label="${acc.status === "disabled" ? "Bật lại" : "Tạm dừng"}">${acc.status === "disabled" ? ICON.play : ICON.pause}</button>
+                <button class="btn btn-danger btn-sm btn-icon" data-acc-action="delete" data-id="${escapeHtml(acc.id)}" title="Xóa ních" aria-label="Xóa ních">${ICON.trash}</button>
               </div>
             </td>
           </tr>
@@ -1077,12 +1074,14 @@ curl ${baseUrlV1}/videos \\
             productImage: null,
             referenceImage: null,
             ...r,
+            ...Object.fromEntries(ROW_IMAGE_FIELDS.map((f) => [f, withDataUrl(r[f])])),
             status: recoveredStatus,
             error: isStaleStillSending ? "" : r.error || "",
             mode: rowMode,
             stepOrder: rowMode === "image" ? 1 : 2,
           };
         });
+        lastSavedImages = imageSignature(state.batchRows);
         if (hadInvalidStatus) {
           saveBatchRows();
         }
@@ -1103,6 +1102,7 @@ curl ${baseUrlV1}/videos \\
         renderProductChips();
       } else {
         state.batchRows = [];
+        lastSavedImages = imageSignature(state.batchRows);
         renderProductChips();
       }
       renderBatchTable();
@@ -1111,6 +1111,10 @@ curl ${baseUrlV1}/videos \\
     }
   }
 
+  const ROW_IMAGE_FIELDS = ["characterImage", "productImage", "referenceImage"];
+  let lastSavedImages = null;
+  let saveInFlight = null;
+  let saveAgain = false;
   let saveTimer = null;
   function scheduleSaveBatchRows() {
     if (saveTimer) clearTimeout(saveTimer);
@@ -1119,19 +1123,65 @@ curl ${baseUrlV1}/videos \\
     }, 450);
   }
 
-  async function saveBatchRows() {
-    try {
-      const slimRows = state.batchRows.map((r) => ({
-        ...r,
-        status: r.status === "running" ? "idle" : r.status,
-      }));
-      await api("/admin/batch-rows", {
-        method: "POST",
-        body: { rows: slimRows },
-      });
-    } catch (_err) {
-      // ignore
+  // What the server already holds, so a status tick can skip image bodies (they are the bulk of the data).
+  function imageSignature(rows) {
+    return rows
+      .map((r) =>
+        ROW_IMAGE_FIELDS.map((f) => {
+          const img = r[f];
+          return img ? `${img.name}:${(img.b64 || "").length}:${(img.b64 || "").slice(-16)}:${img.linkedFilename || ""}` : "";
+        }).join("|")
+      )
+      .join(";");
+  }
+
+  function withDataUrl(img) {
+    return img && img.b64 && !img.dataUrl ? { ...img, dataUrl: `data:${img.mime || "image/png"};base64,${img.b64}` } : img;
+  }
+
+  function rowForSave(row, keepImages) {
+    const slim = { ...row, status: row.status === "running" ? "idle" : row.status };
+    for (const f of ROW_IMAGE_FIELDS) {
+      if (keepImages) {
+        delete slim[f];
+      } else if (slim[f] && slim[f].b64) {
+        // dataUrl only repeats b64; rebuilt by withDataUrl on load.
+        const { dataUrl: _dataUrl, ...rest } = slim[f];
+        slim[f] = rest;
+      }
     }
+    return slim;
+  }
+
+  async function saveRowsOnce() {
+    const signature = imageSignature(state.batchRows);
+    const keepImages = signature === lastSavedImages;
+    await api("/admin/batch-rows", {
+      method: "POST",
+      body: { keepImages, rows: state.batchRows.map((r) => rowForSave(r, keepImages)) },
+    });
+    lastSavedImages = signature;
+  }
+
+  // One save at a time: calls made during a save collapse into a single follow-up with the latest rows.
+  async function saveBatchRows() {
+    if (saveInFlight) {
+      saveAgain = true;
+      return saveInFlight;
+    }
+    saveInFlight = (async () => {
+      try {
+        do {
+          saveAgain = false;
+          await saveRowsOnce();
+        } while (saveAgain);
+      } catch (_err) {
+        // ignore
+      } finally {
+        saveInFlight = null;
+      }
+    })();
+    return saveInFlight;
   }
 
   function updateBatchStats() {
@@ -1148,7 +1198,11 @@ curl ${baseUrlV1}/videos \\
     if ($("#batchStatDone")) $("#batchStatDone").textContent = String(done);
     if ($("#navBadgeBatch")) $("#navBadgeBatch").textContent = String(total);
     if ($("#btnRunPendingLabel")) {
-      $("#btnRunPendingLabel").textContent = pending > 0 ? `Chạy chờ chạy (${pending})` : "Chạy chờ chạy";
+      $("#btnRunPendingLabel").textContent = pending > 0 ? `Chạy luồng chờ (${pending})` : "Chạy luồng chờ";
+    }
+    const isBusy = running > 0 || state.batchRunning;
+    for (const sel of ["#btnStopSelectedBatch", "#btnStopAllBatch"]) {
+      if ($(sel)) $(sel).hidden = !isBusy;
     }
   }
 
@@ -1258,7 +1312,12 @@ curl ${baseUrlV1}/videos \\
     }
     state.previewRowId = row.id;
     box.dataset.rowId = row.id;
-    const media = row.mediaUrl
+    // A status tick re-renders this pane; keep the same <video> so it neither refetches nor restarts.
+    const liveVideo = box.querySelector("video.preview-media");
+    const keptVideo = liveVideo && isVideoRow(row) && liveVideo.getAttribute("src") === row.mediaUrl ? liveVideo : null;
+    const media = keptVideo
+      ? `<div data-kept-video></div>`
+      : row.mediaUrl
       ? isVideoRow(row)
         ? `<video src="${escapeHtml(row.mediaUrl)}" class="preview-media" controls playsinline preload="metadata"></video>`
         : `<img src="${escapeHtml(row.mediaUrl)}" alt="${escapeHtml(row.filename || "Kết quả")}" class="preview-media" />`
@@ -1287,6 +1346,7 @@ curl ${baseUrlV1}/videos \\
         <a class="btn btn-sm" href="${escapeHtml(row.mediaUrl)}" download="${escapeHtml(row.filename || "")}">${ICON.download}<span>Tải về</span></a>` : ""}
         <button class="btn btn-danger btn-sm" data-row-action="delete" data-id="${row.id}" title="Xoá luồng này (tự dừng nếu đang chạy)">${ICON.trash}<span>Xoá</span></button>
       </div>`;
+    if (keptVideo) box.querySelector("[data-kept-video]")?.replaceWith(keptVideo);
   }
 
   function renderBatchTable() {
@@ -1335,11 +1395,12 @@ curl ${baseUrlV1}/videos \\
     list.className = `queue-list is-${view}`;
     list.setAttribute("role", view === "table" ? "presentation" : "list");
     const thumbOf = (row) => {
+      // A <video> per row holds Chromium's 6 connections per host and stalls every API call behind it,
+      // and each re-render fetches them all again. Only the preview pane loads a video.
+      if (row.mediaUrl && isVideoRow(row)) return ICON.play;
       const thumbSrc = row.mediaUrl || row.productImage?.dataUrl || "";
-      return row.mediaUrl && isVideoRow(row)
-        ? `<video src="${escapeHtml(`${row.mediaUrl}${row.mediaUrl.includes("?") ? "&" : "?"}r=2#t=0.5`)}" preload="metadata" muted playsinline aria-hidden="true"></video>`
-        : thumbSrc
-        ? `<img src="${escapeHtml(thumbSrc)}" alt="" />`
+      return thumbSrc
+        ? `<img src="${escapeHtml(thumbSrc)}" alt="" loading="lazy" decoding="async" />`
         : row.mode === "image" ? ICON.image : ICON.clapperboard;
     };
     const check = (row, idx) =>
@@ -2134,161 +2195,6 @@ curl ${baseUrlV1}/videos \\
     showToast(`Đang tải xuống ${readyRows.length} file...`);
   }
 
-  // ==================== MEDIA GALLERY ====================
-  async function loadMedia() {
-    try {
-      const data = await api("/admin/media");
-      state.media = data.media || [];
-      state.mediaLimit = MEDIA_PAGE_SIZE;
-      renderMediaGallery();
-    } catch (_err) {
-      // ignore
-    }
-  }
-
-  function formatBytes(bytes) {
-    const b = Number(bytes) || 0;
-    if (b < 1024) return `${b} B`;
-    if (b < 1024 * 1024) return `${Math.round(b / 1024)} KB`;
-    if (b < 1024 * 1024 * 1024) return `${(b / 1048576).toFixed(1)} MB`;
-    return `${(b / 1073741824).toFixed(2)} GB`;
-  }
-
-  function getFilteredSortedMedia() {
-    const typeFilter = $("#mediaFilterSelect")?.value || "all";
-    const q = ($("#mediaSearchInput")?.value || "").trim().toLowerCase();
-    const sort = $("#mediaSortSelect")?.value || "newest";
-    const items = (state.media || []).filter(
-      (m) => (typeFilter === "all" || m.type === typeFilter) && (!q || m.name.toLowerCase().includes(q))
-    );
-    if (sort === "oldest") items.sort((a, b) => a.created_at - b.created_at);
-    else if (sort === "name") items.sort((a, b) => String(a.name).localeCompare(String(b.name)));
-    else if (sort === "size") items.sort((a, b) => (b.size || 0) - (a.size || 0));
-    else items.sort((a, b) => b.created_at - a.created_at);
-    return items;
-  }
-
-  function updateMediaSelCount() {
-    const n = state.mediaSelected ? state.mediaSelected.size : 0;
-    if ($("#mediaSelCount")) $("#mediaSelCount").textContent = String(n);
-  }
-
-  const MEDIA_PAGE_SIZE = 48;
-
-  function renderMediaGallery() {
-    const grid = $("#mediaGalleryGrid");
-    if (!grid) return;
-    if (!state.mediaSelected) state.mediaSelected = new Set();
-    // Drop selections for files that no longer exist.
-    const existing = new Set((state.media || []).map((m) => m.name));
-    for (const n of [...state.mediaSelected]) if (!existing.has(n)) state.mediaSelected.delete(n);
-
-    const items = getFilteredSortedMedia();
-    const totalSize = items.reduce((s, m) => s + (m.size || 0), 0);
-    if ($("#mediaStatTotal")) $("#mediaStatTotal").textContent = String(items.length);
-    if ($("#mediaStatSize")) $("#mediaStatSize").textContent = formatBytes(totalSize);
-    updateMediaSelCount();
-
-    if (!items.length) {
-      grid.innerHTML = `<div class="card" style="grid-column: 1 / -1; text-align:center; padding: 44px; color: var(--muted-foreground)">${ICON.image}<div style="margin-top:8px">Chưa có Video hoặc Ảnh nào khớp.</div></div>`;
-      return;
-    }
-
-    // Cap the DOM to keep many <video preload=metadata> thumbnails from lagging weak PCs.
-    const limit = state.mediaLimit || MEDIA_PAGE_SIZE;
-    const shown = items.slice(0, limit);
-    const moreBtn =
-      items.length > limit
-        ? `<div style="grid-column:1/-1; text-align:center; padding:12px"><button class="btn btn-soft" data-media-more>Xem thêm (${items.length - limit} mục nữa)</button></div>`
-        : "";
-
-    grid.innerHTML = shown
-      .map((item) => {
-        const selected = state.mediaSelected.has(item.name);
-        const vidThumbSrc =
-          item.type === "video"
-            ? `${item.url}${item.url.includes("?") ? "&" : "?"}s=${item.size || 0}#t=0.5`
-            : item.url;
-        return `
-          <div class="media-item" style="position:relative${selected ? ";outline:2px solid var(--accent-strong);outline-offset:-2px" : ""}">
-            <label style="position:absolute; top:7px; left:7px; z-index:3; background:rgba(0,0,0,.55); border-radius:4px; padding:3px 4px; display:flex; cursor:pointer">
-              <input type="checkbox" data-media-select="${escapeHtml(item.name)}" ${selected ? "checked" : ""} style="margin:0; cursor:pointer" />
-            </label>
-            ${
-              item.type === "video"
-                ? `<video src="${escapeHtml(vidThumbSrc)}" class="media-preview" preload="metadata" playsinline muted loop onmouseover="this.play()" onmouseout="this.pause()" data-media-preview="${escapeHtml(item.url)}" data-media-type="video" data-media-name="${escapeHtml(item.name)}"></video>`
-                : `<img src="${escapeHtml(item.url)}" class="media-preview" loading="lazy" data-media-preview="${escapeHtml(item.url)}" data-media-type="image" data-media-name="${escapeHtml(item.name)}" />`
-            }
-            <div class="media-meta">
-              <div class="media-name" title="${escapeHtml(item.name)}">${escapeHtml(item.name)}</div>
-              <div style="display:flex; justify-content:space-between; align-items:center; font-size:11px; color:var(--muted-foreground)">
-                <span>${item.type === "video" ? "Video" : "Ảnh"} · ${formatBytes(item.size)}</span>
-                <span>${formatTimeAgo(item.created_at)}</span>
-              </div>
-              <div style="display:flex; gap:6px; margin-top:4px">
-                <button class="btn btn-soft btn-sm" style="flex:1" data-media-preview="${escapeHtml(item.url)}" data-media-type="${item.type}" data-media-name="${escapeHtml(item.name)}">${ICON.search}<span>Xem</span></button>
-                <button class="btn btn-sm" data-media-copy="${escapeHtml(item.url)}" title="Copy link media">${ICON.globe}</button>
-                <a class="btn btn-sm" href="${escapeHtml(item.url)}" download="${escapeHtml(item.name)}" title="Tải về">${ICON.download}</a>
-                <button class="btn btn-danger btn-sm" data-media-delete="${escapeHtml(item.name)}" title="Xóa">${ICON.trash}</button>
-              </div>
-            </div>
-          </div>
-        `;
-      })
-      .join("") + moreBtn;
-  }
-
-  async function exportSelectedMedia() {
-    const names = [...(state.mediaSelected || [])];
-    if (!names.length) return showToast("Chưa chọn file nào để xuất.", true);
-    if (window.embongDesktop && window.embongDesktop.exportMediaFiles) {
-      let targetDir = (state.settings && state.settings.exportDir) || "";
-      if (!targetDir) {
-        const r = await window.embongDesktop.chooseDownloadFolder();
-        if (r.canceled || !r.folderPath) return;
-        targetDir = r.folderPath;
-        await saveExportDir(targetDir);
-      }
-      let out = await window.embongDesktop.exportMediaFiles({ filenames: names, targetDir });
-      if (!out.ok) {
-        const r = await window.embongDesktop.chooseDownloadFolder(targetDir);
-        if (r.canceled || !r.folderPath) return showToast(out.error || "Không xuất được file", true);
-        targetDir = r.folderPath;
-        await saveExportDir(targetDir);
-        out = await window.embongDesktop.exportMediaFiles({ filenames: names, targetDir });
-      }
-      showToast(out.ok ? `Đã xuất ${out.copied} file vào: ${targetDir}` : out.error || "Không xuất được file", !out.ok);
-    } else {
-      for (const n of names) {
-        const a = document.createElement("a");
-        a.href = `/v1/media/${encodeURIComponent(n)}`;
-        a.download = n;
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      }
-    }
-  }
-
-  async function deleteSelectedMedia() {
-    const names = [...(state.mediaSelected || [])];
-    if (!names.length) return showToast("Chưa chọn file nào để xóa.", true);
-    if (!confirm(`Xóa vĩnh viễn ${names.length} file đã chọn?`)) return;
-    let deleted = 0;
-    for (const n of names) {
-      try {
-        await api(`/admin/media/${encodeURIComponent(n)}`, { method: "DELETE" });
-        deleted += 1;
-      } catch (_e) {
-        // continue
-      }
-    }
-    state.mediaSelected.clear();
-    showToast(`Đã xóa ${deleted} file.`);
-    loadMedia();
-  }
-
-  // ==================== TASKS & LOGS ====================
   async function loadTasksAndLogs() {
     try {
       const [tData, lData] = await Promise.all([api("/admin/tasks"), api("/admin/logs")]);
@@ -2792,6 +2698,24 @@ curl ${baseUrlV1}/videos \\
       addOneStreamFromPrompt({ focusPreview: true });
     });
 
+    // Toolbar menus are native <details>: an item click or outside click closes them, as does Esc.
+    const closeMenus = (keep = null) => {
+      document.querySelectorAll("details.menu[open]").forEach((m) => {
+        if (m !== keep) m.open = false;
+      });
+    };
+    document.addEventListener("click", (e) => {
+      const summary = e.target.closest?.("details.menu > summary");
+      closeMenus(summary ? summary.parentElement : null);
+    });
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      const open = document.querySelector("details.menu[open]");
+      if (!open) return;
+      closeMenus();
+      open.querySelector("summary")?.focus();
+    });
+
     $("#btnSelectAllRows")?.addEventListener("click", () => {
       visibleRows().forEach((r) => {
         r.selected = true;
@@ -2971,7 +2895,7 @@ curl ${baseUrlV1}/videos \\
       renderProductChips();
       saveBatchRows();
       renderBatchTable();
-      showToast(`Đã dọn ${doneCount} luồng đã xong khỏi hàng đợi (video vẫn lưu trong Thư viện).`);
+      showToast(`Đã dọn ${doneCount} luồng đã xong khỏi hàng đợi (video vẫn nằm trong thư mục).`);
     });
 
     $("#btnRunSelectedBatch")?.addEventListener("click", async () => {
@@ -3022,11 +2946,10 @@ curl ${baseUrlV1}/videos \\
       if (window.embongDesktop && window.embongDesktop.openMediaFolder) {
         await window.embongDesktop.openMediaFolder();
       } else {
-        switchView("media");
+        showToast("Chỉ mở được thư mục trong ứng dụng desktop.", true);
       }
     };
     $("#btnOpenMediaFolder")?.addEventListener("click", openFolderHandler);
-    $("#btnOpenMediaFolderGallery")?.addEventListener("click", openFolderHandler);
 
     // Table delegations
     $(".studio")?.addEventListener("input", (e) => {
@@ -3290,7 +3213,7 @@ curl ${baseUrlV1}/videos \\
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = `${ICON.plus}<span>Lưu &amp; Check LIVE/DIE ngay</span>`;
+          btn.innerHTML = `${ICON.plus}<span>Lưu &amp; kiểm tra</span>`;
         }
       }
     });
@@ -3319,7 +3242,7 @@ curl ${baseUrlV1}/videos \\
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = `Gắn Proxy hàng loạt cho các ních`;
+          btn.innerHTML = `${ICON.check}<span>Gán Proxy hàng loạt</span>`;
         }
       }
     });
@@ -3381,7 +3304,7 @@ curl ${baseUrlV1}/videos \\
       if (pendingBrowserLogins > 0) {
         btn.innerHTML = `${ICON.spinner}<span>Mở thêm Chrome đăng nhập (Đang chờ ${pendingBrowserLogins} cửa sổ...)</span>`;
       } else {
-        btn.innerHTML = `${ICON.globe}<span>Mở Chrome đăng nhập (Tự lấy Cookie)</span>`;
+        btn.innerHTML = `${ICON.globe}<span>Đăng nhập bằng Chrome</span>`;
       }
     };
 
@@ -3463,7 +3386,7 @@ curl ${baseUrlV1}/videos \\
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = `${ICON.refresh}<span>Check LIVE / DIE tất cả (+48h)</span>`;
+          btn.innerHTML = `${ICON.refresh}<span>Kiểm tra tất cả</span>`;
         }
       }
     });
@@ -3499,7 +3422,7 @@ curl ${baseUrlV1}/videos \\
           await api(`/admin/accounts/${id}/toggle`, { method: "POST" });
         } else if (action === "open-chrome") {
           btn.disabled = true;
-          btn.innerHTML = `${ICON.spinner}<span>Đang mở...</span>`;
+          btn.innerHTML = ICON.spinner;
           showToast("Đang mở cửa sổ Chrome riêng của ních này...");
           const r = await api(`/admin/accounts/${id}/open-chrome`, { method: "POST" });
           if (r.ok) {
@@ -3509,7 +3432,7 @@ curl ${baseUrlV1}/videos \\
           }
         } else if (action === "renew") {
           btn.disabled = true;
-          btn.innerHTML = `${ICON.spinner}<span>Check...</span>`;
+          btn.innerHTML = ICON.spinner;
           const r = await api(`/admin/accounts/${id}/renew`, { method: "POST" });
           if (r.ok) {
             showToast(
@@ -3772,7 +3695,7 @@ curl ${baseUrlV1}/videos \\
       } finally {
         if (btn) {
           btn.disabled = false;
-          btn.innerHTML = `${ICON.sparkles}<span>Tạo kịch bản bằng AI (Gemini / Muse-Spark)</span>`;
+          btn.innerHTML = `${ICON.sparkles}<span>Tạo kịch bản</span>`;
         }
       }
     });
@@ -3862,73 +3785,6 @@ curl ${baseUrlV1}/videos \\
       const ok = pushScriptToBatchTable();
       if (ok) {
         await runSelectedBatch();
-      }
-    });
-
-    // Media Gallery
-    const reRenderMedia = () => {
-      state.mediaLimit = MEDIA_PAGE_SIZE;
-      renderMediaGallery();
-    };
-    $("#mediaFilterSelect")?.addEventListener("change", reRenderMedia);
-    $("#mediaSortSelect")?.addEventListener("change", reRenderMedia);
-    $("#mediaSearchInput")?.addEventListener("input", reRenderMedia);
-    $("#btnRefreshMedia")?.addEventListener("click", () => loadMedia());
-    $("#btnMediaExportSelected")?.addEventListener("click", () => exportSelectedMedia());
-    $("#btnMediaDeleteSelected")?.addEventListener("click", () => deleteSelectedMedia());
-    $("#mediaSelectAll")?.addEventListener("change", (e) => {
-      if (!state.mediaSelected) state.mediaSelected = new Set();
-      const visible = getFilteredSortedMedia();
-      if (e.target.checked) visible.forEach((m) => state.mediaSelected.add(m.name));
-      else visible.forEach((m) => state.mediaSelected.delete(m.name));
-      renderMediaGallery();
-    });
-    // Checkbox toggles update selection without a full re-render.
-    $("#mediaGalleryGrid")?.addEventListener("change", (e) => {
-      const cb = e.target.closest("[data-media-select]");
-      if (!cb) return;
-      if (!state.mediaSelected) state.mediaSelected = new Set();
-      const name = cb.getAttribute("data-media-select");
-      if (cb.checked) state.mediaSelected.add(name);
-      else state.mediaSelected.delete(name);
-      cb.closest(".media-item")?.style.setProperty("outline", cb.checked ? "2px solid var(--accent-strong)" : "none");
-      cb.closest(".media-item")?.style.setProperty("outline-offset", "-2px");
-      updateMediaSelCount();
-    });
-    $("#mediaGalleryGrid")?.addEventListener("click", async (e) => {
-      const prev = e.target.closest("[data-media-preview]");
-      if (prev) {
-        openMediaPreview(
-          prev.dataset.mediaPreview,
-          prev.dataset.mediaType,
-          prev.dataset.mediaName
-        );
-        return;
-      }
-      const copy = e.target.closest("[data-media-copy]");
-      if (copy) {
-        const link = location.origin + copy.getAttribute("data-media-copy");
-        try {
-          await navigator.clipboard.writeText(link);
-          showToast("Đã copy link media!");
-        } catch (_e) {
-          showToast("Không copy được link", true);
-        }
-        return;
-      }
-      const del = e.target.closest("[data-media-delete]");
-      if (del) {
-        const name = del.dataset.mediaDelete;
-        await api(`/admin/media/${encodeURIComponent(name)}`, { method: "DELETE" });
-        showToast(`Đã xóa ${name}`);
-        loadMedia();
-        loadStatus();
-        return;
-      }
-      const more = e.target.closest("[data-media-more]");
-      if (more) {
-        state.mediaLimit = (state.mediaLimit || MEDIA_PAGE_SIZE) + MEDIA_PAGE_SIZE;
-        renderMediaGallery();
       }
     });
 
